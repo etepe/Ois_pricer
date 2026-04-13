@@ -128,6 +128,23 @@ table.dtable tbody tr:hover{background:var(--bg-hover)}
     </div>
   </section>
 
+  <!-- OIS Fiyatlama — Model vs Piyasa -->
+  <section class="card full">
+    <div class="card-h">
+      <span class="card-t">OIS Fiyatlama — Model vs Piyasa</span>
+      <span style="font-size:.7rem;color:var(--dim)" id="model-info"></span>
+    </div>
+    <div class="card-b">
+      <table class="dtable">
+        <thead><tr>
+          <th>Tenor</th><th>Vade</th><th style="text-align:right">Gün</th><th style="text-align:center">Tip</th>
+          <th style="text-align:right">Model</th><th style="text-align:right">Piyasa</th><th style="text-align:right">Fark (bps)</th>
+        </tr></thead>
+        <tbody id="model-tbody"><tr><td colspan="7" style="text-align:center;color:var(--dim);padding:1.5rem">Patika yükleniyor...</td></tr></tbody>
+      </table>
+    </div>
+  </section>
+
   <!-- TLREF Spreads -->
   <section class="card full">
     <div class="card-h"><span class="card-t">TLREF Spreads</span></div>
@@ -158,7 +175,7 @@ async function loadStatus(){try{const d=await(await fetch('/api/status')).json()
 
 async function loadCurve(){try{curveData=await(await fetch('/api/curve')).json();renderChart();const p=curveData.filter(d=>d.DTM>0);document.getElementById('curve-info').textContent=`${curveData.length} nokta | ${Math.min(...p.map(d=>d.spot_ois)).toFixed(1)}%–${Math.max(...p.map(d=>d.spot_ois)).toFixed(1)}%`}catch(e){console.error(e)}}
 
-async function loadMPCPath(){try{const d=await(await fetch('/api/mpc_path')).json();spotRate=d.spot_rate;meetings=d.meetings.map(m=>({...m,delta_bps:m.implied_delta_bps}));impliedDeltas=d.meetings.map(m=>m.implied_delta_bps);renderMPC()}catch(e){console.error(e)}}
+async function loadMPCPath(){try{const d=await(await fetch('/api/mpc_path')).json();spotRate=d.spot_rate;meetings=d.meetings.map(m=>({...m,delta_bps:m.implied_delta_bps}));impliedDeltas=d.meetings.map(m=>m.implied_delta_bps);renderMPC();fetchModelRates()}catch(e){console.error(e)}}
 
 async function loadSpreads(){try{const data=await(await fetch('/api/spreads')).json();const tb=document.getElementById('sp-tbody');if(!data.length){tb.innerHTML='<tr><td colspan="5" style="text-align:center;color:var(--dim);padding:1.5rem">Tahvil verisi yok</td></tr>';return}tb.innerHTML=data.map(d=>{const cls=d.ois_spread_bps==null?'c-mut':(d.ois_spread_bps>=0?'c-pos':'c-neg');const sp=d.ois_spread_bps!=null?(d.ois_spread_bps>=0?'+':'')+d.ois_spread_bps.toFixed(1):'—';return`<tr><td style="font-size:.74rem">${d.isin}</td><td>${d.maturity}</td><td style="text-align:right">${d.DTM}</td><td style="text-align:right">${d.px_last.toFixed(2)}</td><td style="text-align:right" class="${cls}">${sp}</td></tr>`}).join('')}catch(e){console.error(e)}}
 
@@ -197,9 +214,39 @@ function renderMPC(){
   drawForwardChart(path);
 }
 
-function onSlider(i,v){meetings[i].delta_bps=parseInt(v,10);renderMPC()}
-function resetToImplied(){meetings.forEach((m,i)=>{m.delta_bps=impliedDeltas[i]||0});renderMPC()}
-function clearAllCuts(){meetings.forEach(m=>{m.delta_bps=0});renderMPC()}
+function onSlider(i,v){meetings[i].delta_bps=parseInt(v,10);renderMPC();fetchModelRatesDebounced()}
+function resetToImplied(){meetings.forEach((m,i)=>{m.delta_bps=impliedDeltas[i]||0});renderMPC();fetchModelRates()}
+function clearAllCuts(){meetings.forEach(m=>{m.delta_bps=0});renderMPC();fetchModelRates()}
+
+/* ═══ Model Rates ═══ */
+let _modelTimer=null;
+function fetchModelRatesDebounced(){clearTimeout(_modelTimer);_modelTimer=setTimeout(fetchModelRates,150)}
+async function fetchModelRates(){
+  try{
+    const payload={spot_rate:spotRate,meetings:meetings.map(m=>({date:m.date,delta_bps:m.delta_bps}))};
+    const r=await fetch('/api/model_rates',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(payload)});
+    const data=await r.json();
+    renderModelRates(data);
+  }catch(e){console.error(e)}
+}
+function renderModelRates(data){
+  const tb=document.getElementById('model-tbody');
+  if(!data||!data.length){tb.innerHTML='<tr><td colspan="7" style="text-align:center;color:var(--dim);padding:1.5rem">—</td></tr>';return}
+  tb.innerHTML=data.map(d=>{
+    const diffCls=d.diff_bps==null?'c-mut':Math.abs(d.diff_bps)<=15?'c-mut':d.diff_bps<0?'c-neg':'c-pos';
+    const diffStr=d.diff_bps!=null?(d.diff_bps>0?'+':'')+d.diff_bps.toFixed(0):'—';
+    const mkt=d.market_rate!=null?d.market_rate.toFixed(2):'—';
+    return`<tr>
+      <td style="font-weight:600;color:var(--text)">${d.tenor}</td>
+      <td style="color:var(--muted)">${d.maturity}</td>
+      <td style="text-align:right;color:var(--dim)">${d.cal_days}</td>
+      <td style="text-align:center;color:var(--dim)">${d.method}</td>
+      <td style="text-align:right;color:var(--blue);font-weight:600">${d.model_rate.toFixed(2)}</td>
+      <td style="text-align:right;color:var(--muted)">${mkt}</td>
+      <td style="text-align:right" class="${diffCls}">${diffStr}</td>
+    </tr>`}).join('');
+  document.getElementById('model-info').textContent=`${data.length} tenor | ${data.filter(d=>d.method==='PAR').length} PAR + ${data.filter(d=>d.method==='ZC').length} ZC`;
+}
 
 /* ═══ Forward Chart (SVG) ═══ */
 function drawForwardChart(path){

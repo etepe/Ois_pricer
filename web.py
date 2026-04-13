@@ -22,7 +22,7 @@ from flask import Flask, jsonify, request, send_from_directory
 
 from config import PPK_DATES
 from data_provider import BloombergProvider, MockProvider
-from engine import bootstrap_onshore, analyze_tlref_bonds, calc_implied_mpc
+from engine import bootstrap_onshore, analyze_tlref_bonds, calc_implied_mpc, compute_model_rates
 
 logging.basicConfig(
     level=logging.INFO,
@@ -207,6 +207,36 @@ def api_mpc_path():
         "spot_rate": round(spot, 2),
         "meetings": meetings,
     })
+
+
+@app.route("/api/model_rates", methods=["POST"])
+def api_model_rates():
+    """
+    Kullanıcının patikasından model OIS rate hesaplar.
+    
+    POST body:
+        { "spot_rate": 46.0, "meetings": [{"date": "2026-04-24", "delta_bps": -575}, ...] }
+    
+    Returns:
+        [{tenor, maturity, cal_days, model_rate, market_rate, diff_bps, method}]
+    """
+    if _state["market"] is None:
+        return jsonify({"error": "Veri yok"}), 503
+
+    body = request.get_json(force=True)
+    spot = body.get("spot_rate", _state["market"].bisttref_rate)
+    mtgs = body.get("meetings", [])
+
+    # Piyasa OIS rate'lerini tenor→rate dict olarak hazırla
+    mkt_rates = {}
+    if _state["market"] is not None:
+        for _, row in _state["market"].tickers.iterrows():
+            mkt_rates[row["tenor"]] = float(row["mid"])
+
+    today = _state["market"].today
+    results = compute_model_rates(today, spot, mtgs, mkt_rates)
+
+    return jsonify(results)
 
 
 @app.route("/api/refresh", methods=["POST"])

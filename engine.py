@@ -423,3 +423,154 @@ def calc_implied_mpc(ppk_dates: list[date], ois_base: pd.DataFrame,
         prev_gu = gu
 
     return pd.DataFrame(results)
+
+
+# ═══════════════════════════════════════════════════════════════════
+#  4) KULLANICI PATİKASINDAN MODEL OIS FİYATLAMA
+# ═══════════════════════════════════════════════════════════════════
+
+STANDARD_TENORS = [
+    ("1W",  0, 1),   ("1M",  1, 0),  ("2M",  2, 0),
+    ("3M",  3, 0),   ("6M",  6, 0),  ("9M",  9, 0),
+    ("1Y",  12, 0),  ("18M", 18, 0), ("2Y",  24, 0),
+    ("3Y",  36, 0),  ("4Y",  48, 0), ("5Y",  60, 0),
+]
+
+
+def _tlref_at(d: date, spot_rate: float, meetings: list[dict]) -> float:
+    """Verilen tarihteki TLREF seviyesi (%). Karar, toplantı gününden itibaren geçerli."""
+    level = spot_rate
+    for m in meetings:
+        md = m["date"] if isinstance(m["date"], date) else date.fromisoformat(m["date"])
+        if md <= d:
+            level += m["delta_bps"] / 100.0
+        else:
+            break
+    return level
+
+
+def _g_factor(d: date, maturity: date) -> int:
+    """Fixing'in geçerli gün sayısı (Cuma→Pzt = 3), vade ile sınırlı."""
+    nxt = d
+    for _ in range(30):
+        nxt += timedelta(days=1)
+        if is_business_day(nxt):
+            break
+    return max(1, min((nxt - d).days, (maturity - d).days))
+
+
+def _mod_following(d: date) -> date:
+    """Modified Following: ileri → iş günü, ay değişirse geri."""
+    if is_business_day(d):
+        return d
+    fwd = d
+    for _ in range(10):
+        fwd += timedelta(days=1)
+        if is_business_day(fwd):
+            break
+    if fwd.month == d.month:
+        return fwd
+    back = d
+    for _ in range(10):
+        back -= timedelta(days=1)
+        if is_business_day(back):
+            return back
+    return fwd
+
+
+def _build_daily_df(start: date, mat: date, spot_rate: float,
+                     meetings: list[dict]) -> dict[date, float]:
+    """
+    Start'tan mat'a günlük DF map oluşturur.
+    DF(T) = 1 / Π(1 + r_i · g_i / 365), sadece iş günlerinde compound.
+    """
+    df_map = {start: 1.0}
+    compound = 1.0
+    cursor = start
+    while cursor < mat:
+        if is_business_day(cursor):
+            r = _tlref_at(cursor, spot_rate, meetings) / 100.0
+            g = _g_factor(cursor, mat)
+            compound *= 1.0 + r * g / 365.0
+        cursor += timedelta(days=1)
+        df_map[cursor] = 1.0 / compound
+    return df_map
+
+
+def _quarterly_schedule(start: date, mat: date) -> list[date]:
+    """3'er aylık kupon takvimi."""
+    coupons = []
+    for i in range(1, 200):
+        raw = _add_months(start, 3 * i)
+        if raw >= mat:
+            coupons.append(mat)
+            return coupons
+        coupons.append(_mod_following(raw))
+    coupons.append(mat)
+    return coupons
+
+
+def _df_lookup(df_map: dict[date, float], target: date) -> float:
+    """DF map'ten target'ın df'ini bul, ±5 gün toleransla."""
+    if target in df_map:
+        return df_map[target]
+    for offset in range(1, 6):
+        for d in [target + timedelta(days=offset), target - timedelta(days=offset)]:
+            if d in df_map:
+                return df_map[d]
+    return df_map.get(max(df_map.keys()), 1.0)
+
+
+def compute_model_rates(
+    today: date,
+    spot_rate: float,
+    meetings: list[dict],
+    market_rates: dict[str, float] | None = None,
+) -> list[dict]:
+    """
+    Kullanıcının faiz patikasından standart OIS vadeleri için model rate hesaplar.
+    
+    Kısa vade (≤95 gün): ZC = (1/DF − 1) · 365/t · 100
+    Uzun vade (>95 gün):  PAR = (1 − DF(T)) / Σ(dcf_i · DF_i) · 100
+    """
+    if market_rates is None:
+        market_rates = {}
+
+    start = _mod_following(today)
+    results = []
+
+    for label, months, weeks in STANDARD_TENORS:
+        raw_mat = today + timedelta(weeks=weeks) if weeks > 0 else _add_months(today, months)
+        mat = _mod_following(raw_mat)
+        cal_days = (mat - start).days
+        if cal_days <= 0:
+            continue
+
+        # Günlük DF map oluştur
+        df_map = _build_daily_df(start, mat, spot_rate, meetings)
+        df_T = _df_lookup(df_map, mat)
+
+        if cal_days <= 95:
+            model_rate = (1.0 / df_T - 1.0) * 365.0 / cal_days * 100.0
+            method = "ZC"
+        else:
+            coupons = _quarterly_schedule(start, mat)
+            annuity = 0.0
+            prev = start
+            for cpn in coupons:
+                dcf = (cpn - prev).days / 365.0
+                annuity += dcf * _df_lookup(df_map, cpn)
+                prev = cpn
+            model_rate = (1.0 - df_T) / annuity * 100.0 if annuity > 0 else float("nan")
+            method = "PAR"
+
+        mkt = market_rates.get(label)
+        diff = round((model_rate - mkt) * 100, 0) if mkt is not None else None
+
+        results.append({
+            "tenor": label, "maturity": mat.isoformat(), "cal_days": cal_days,
+            "model_rate": round(model_rate, 2), "market_rate": mkt,
+            "diff_bps": diff, "method": method,
+        })
+
+    return results
