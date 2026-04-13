@@ -1,0 +1,640 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>OIS Pricer</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+:root{
+  --bg-primary:#060A14;
+  --bg-card:#0D1117;
+  --bg-card-hover:#161B22;
+  --border:#1B2433;
+  --border-glow:rgba(88,166,255,0.15);
+  --text-primary:#E6EDF3;
+  --text-secondary:#8B949E;
+  --text-muted:#484F58;
+  --blue:#58A6FF;
+  --green:#3FB950;
+  --amber:#D29922;
+  --red:#F85149;
+  --cyan:#39D2C0;
+  --font-head:'DM Sans',sans-serif;
+  --font-mono:'JetBrains Mono',monospace;
+}
+html{font-size:14px}
+body{
+  background:var(--bg-primary);
+  color:var(--text-primary);
+  font-family:var(--font-head);
+  min-height:100vh;
+  background-image:
+    linear-gradient(rgba(88,166,255,0.03) 1px,transparent 1px),
+    linear-gradient(90deg,rgba(88,166,255,0.03) 1px,transparent 1px);
+  background-size:40px 40px;
+}
+
+/* ── Header ── */
+.header{
+  display:flex;align-items:center;justify-content:space-between;
+  padding:1rem 2rem;
+  border-bottom:1px solid var(--border);
+  background:linear-gradient(180deg,rgba(13,17,23,0.95),rgba(6,10,20,0.98));
+  backdrop-filter:blur(12px);
+  position:sticky;top:0;z-index:100;
+}
+.header h1{
+  font-size:1.25rem;font-weight:700;letter-spacing:-0.02em;
+  display:flex;align-items:center;gap:0.5rem;
+}
+.header h1 .dot{
+  width:8px;height:8px;border-radius:50%;background:var(--green);
+  box-shadow:0 0 8px var(--green);
+  animation:pulse 2s ease-in-out infinite;
+}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:0.4}}
+.header-meta{display:flex;gap:1.5rem;align-items:center;font-size:0.8rem}
+.header-meta span{color:var(--text-secondary)}
+.header-meta .val{color:var(--text-primary);font-family:var(--font-mono);font-weight:500}
+.btn-refresh{
+  background:transparent;border:1px solid var(--border);
+  color:var(--blue);padding:0.4rem 0.9rem;border-radius:6px;
+  font-family:var(--font-head);font-size:0.8rem;cursor:pointer;
+  transition:all 0.2s;
+}
+.btn-refresh:hover{background:rgba(88,166,255,0.1);border-color:var(--blue)}
+
+/* ── Layout ── */
+.dashboard{
+  display:grid;
+  grid-template-columns:1fr 340px;
+  grid-template-rows:auto auto;
+  gap:1rem;
+  padding:1.5rem 2rem;
+  max-width:1600px;margin:0 auto;
+}
+
+/* ── Cards ── */
+.card{
+  background:var(--bg-card);
+  border:1px solid var(--border);
+  border-radius:10px;
+  overflow:hidden;
+}
+.card-header{
+  padding:0.75rem 1.1rem;
+  border-bottom:1px solid var(--border);
+  display:flex;align-items:center;justify-content:space-between;
+}
+.card-title{
+  font-size:0.85rem;font-weight:600;letter-spacing:0.02em;
+  text-transform:uppercase;color:var(--text-secondary);
+}
+.card-body{padding:1rem 1.1rem}
+
+/* ── Curve Chart ── */
+.chart-card{grid-column:1/2;grid-row:1/2}
+.chart-wrap{position:relative;height:340px}
+
+/* ── Lookup Panel ── */
+.lookup-card{grid-column:2/3;grid-row:1/2}
+.lookup-input-group{display:flex;gap:0.5rem;margin-bottom:1rem}
+.lookup-input{
+  flex:1;background:var(--bg-primary);border:1px solid var(--border);
+  border-radius:6px;padding:0.6rem 0.8rem;
+  color:var(--text-primary);font-family:var(--font-mono);font-size:0.95rem;
+  outline:none;transition:border-color 0.2s;
+}
+.lookup-input:focus{border-color:var(--blue)}
+.lookup-input::placeholder{color:var(--text-muted)}
+.btn-lookup{
+  background:var(--blue);color:#fff;border:none;
+  padding:0.6rem 1rem;border-radius:6px;cursor:pointer;
+  font-family:var(--font-head);font-weight:600;font-size:0.85rem;
+  transition:opacity 0.2s;
+}
+.btn-lookup:hover{opacity:0.85}
+
+.result-grid{display:grid;grid-template-columns:1fr 1fr;gap:0.6rem}
+.result-item{
+  background:var(--bg-primary);border-left:3px solid var(--blue);
+  border-radius:0 6px 6px 0;padding:0.7rem 0.9rem;
+}
+.result-item.green{border-left-color:var(--green)}
+.result-item.amber{border-left-color:var(--amber)}
+.result-item.cyan{border-left-color:var(--cyan)}
+.result-label{font-size:0.7rem;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.05em;margin-bottom:0.2rem}
+.result-value{font-family:var(--font-mono);font-size:1.15rem;font-weight:600}
+
+/* ── Quick tenor buttons ── */
+.tenor-buttons{display:flex;flex-wrap:wrap;gap:0.35rem;margin-bottom:1rem}
+.tenor-btn{
+  background:var(--bg-primary);border:1px solid var(--border);
+  color:var(--text-secondary);padding:0.3rem 0.6rem;border-radius:4px;
+  font-family:var(--font-mono);font-size:0.75rem;cursor:pointer;
+  transition:all 0.15s;
+}
+.tenor-btn:hover,.tenor-btn.active{
+  border-color:var(--blue);color:var(--blue);
+  background:rgba(88,166,255,0.08);
+}
+
+/* ── Tables ── */
+.table-card{grid-column:1/3}
+.tables-split{display:grid;grid-template-columns:1fr 1fr;gap:1rem}
+table{width:100%;border-collapse:collapse;font-size:0.82rem}
+thead th{
+  text-align:left;padding:0.5rem 0.7rem;
+  color:var(--text-muted);font-weight:500;font-size:0.72rem;
+  text-transform:uppercase;letter-spacing:0.06em;
+  border-bottom:1px solid var(--border);
+}
+tbody td{
+  padding:0.5rem 0.7rem;border-bottom:1px solid rgba(27,36,51,0.5);
+  font-family:var(--font-mono);font-size:0.82rem;
+}
+tbody tr:hover{background:var(--bg-card-hover)}
+.num-pos{color:var(--green)}
+.num-neg{color:var(--red)}
+.num-neutral{color:var(--text-primary)}
+
+/* ── MPC bar ── */
+.mpc-bar-wrap{display:flex;align-items:center;gap:0.5rem}
+.mpc-bar{
+  height:6px;border-radius:3px;
+  background:linear-gradient(90deg,var(--blue),var(--cyan));
+  transition:width 0.4s ease;min-width:2px;
+}
+
+/* ── Footer ── */
+.footer{
+  text-align:center;padding:1.5rem;
+  color:var(--text-muted);font-size:0.7rem;
+  letter-spacing:0.05em;text-transform:uppercase;
+}
+
+/* ── Loading ── */
+.loading{
+  display:flex;align-items:center;justify-content:center;
+  height:200px;color:var(--text-muted);font-size:0.85rem;
+}
+.spinner{
+  width:20px;height:20px;border:2px solid var(--border);
+  border-top-color:var(--blue);border-radius:50%;
+  animation:spin 0.8s linear infinite;margin-right:0.6rem;
+}
+@keyframes spin{to{transform:rotate(360deg)}}
+</style>
+</head>
+<body>
+
+<!-- Header -->
+<header class="header">
+  <h1><span class="dot"></span>OIS Pricer</h1>
+  <div class="header-meta">
+    <span>BISTTREF <span class="val" id="hdr-bisttref">—</span></span>
+    <span>Grid <span class="val" id="hdr-grid">—</span></span>
+    <span>Güncelleme <span class="val" id="hdr-update">—</span></span>
+    <button class="btn-refresh" onclick="refreshAll()">↻ Yenile</button>
+  </div>
+</header>
+
+<!-- Dashboard -->
+<main class="dashboard">
+
+  <!-- OIS Curve Chart -->
+  <section class="card chart-card">
+    <div class="card-header">
+      <span class="card-title">Onshore OIS Eğrisi — ACT/365</span>
+      <span style="font-size:0.75rem;color:var(--text-muted)" id="curve-info"></span>
+    </div>
+    <div class="card-body">
+      <div class="chart-wrap">
+        <canvas id="oisChart"></canvas>
+      </div>
+    </div>
+  </section>
+
+  <!-- Lookup Panel -->
+  <section class="card lookup-card">
+    <div class="card-header">
+      <span class="card-title">Vade Sorgula</span>
+    </div>
+    <div class="card-body">
+      <div class="tenor-buttons" id="tenor-buttons"></div>
+      <div class="lookup-input-group">
+        <input type="number" class="lookup-input" id="dtm-input" 
+               placeholder="DTM (gün)" min="1" max="4000"
+               onkeydown="if(event.key==='Enter')doLookup()">
+        <button class="btn-lookup" onclick="doLookup()">Ara</button>
+      </div>
+      <div class="result-grid" id="lookup-results">
+        <div class="result-item">
+          <div class="result-label">Spot OIS</div>
+          <div class="result-value" id="res-rate">—</div>
+        </div>
+        <div class="result-item green">
+          <div class="result-label">Discount Factor</div>
+          <div class="result-value" id="res-df">—</div>
+        </div>
+        <div class="result-item amber">
+          <div class="result-label">Zero Coupon</div>
+          <div class="result-value" id="res-zc">—</div>
+        </div>
+        <div class="result-item cyan">
+          <div class="result-label">Gross-Up (1/df)</div>
+          <div class="result-value" id="res-gu">—</div>
+        </div>
+      </div>
+
+      <!-- Crosshair info -->
+      <div style="margin-top:1.2rem;border-top:1px solid var(--border);padding-top:0.8rem">
+        <div class="result-label" style="margin-bottom:0.4rem">Grafik üzerinde tıkla veya tenor seç</div>
+        <div style="font-family:var(--font-mono);font-size:0.8rem;color:var(--text-secondary)" id="crosshair-info">
+          Eğri üzerinde herhangi bir noktayı sorgulayabilirsin.
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Tables Row -->
+  <section class="card table-card">
+    <div class="card-header">
+      <span class="card-title">TLREF Spreads &amp; Implied PPK</span>
+    </div>
+    <div class="card-body">
+      <div class="tables-split">
+        <!-- TLREF Spreads -->
+        <div>
+          <table>
+            <thead>
+              <tr>
+                <th>ISIN</th>
+                <th>Vade</th>
+                <th style="text-align:right">DTM</th>
+                <th style="text-align:right">Dirty</th>
+                <th style="text-align:right">Spread (bps)</th>
+              </tr>
+            </thead>
+            <tbody id="spreads-body">
+              <tr><td colspan="5" class="loading"><div class="spinner"></div>Yükleniyor...</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <!-- Implied MPC -->
+        <div>
+          <table>
+            <thead>
+              <tr>
+                <th>PPK Tarihi</th>
+                <th style="text-align:right">Period</th>
+                <th style="text-align:right">Forward</th>
+                <th style="text-align:right">Implied MPC</th>
+                <th style="width:120px"></th>
+              </tr>
+            </thead>
+            <tbody id="mpc-body">
+              <tr><td colspan="5" class="loading"><div class="spinner"></div>Yükleniyor...</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </section>
+
+</main>
+
+<footer class="footer">OIS PRICER — FETM RESEARCH</footer>
+
+<script>
+// ═══════════════════════════════════════════════════════════════
+//  State
+// ═══════════════════════════════════════════════════════════════
+let curveData = [];
+let oisChart = null;
+
+const TENOR_PRESETS = [
+  {label:'O/N', dtm:1}, {label:'1W', dtm:7}, {label:'1M', dtm:30},
+  {label:'3M', dtm:91}, {label:'6M', dtm:183}, {label:'9M', dtm:275},
+  {label:'1Y', dtm:365}, {label:'2Y', dtm:731}, {label:'3Y', dtm:1098},
+  {label:'5Y', dtm:1826}, {label:'7Y', dtm:2557}, {label:'10Y', dtm:3653},
+];
+
+// ═══════════════════════════════════════════════════════════════
+//  Init
+// ═══════════════════════════════════════════════════════════════
+document.addEventListener('DOMContentLoaded', () => {
+  buildTenorButtons();
+  loadAll();
+});
+
+function buildTenorButtons() {
+  const c = document.getElementById('tenor-buttons');
+  TENOR_PRESETS.forEach(t => {
+    const btn = document.createElement('button');
+    btn.className = 'tenor-btn';
+    btn.textContent = t.label;
+    btn.onclick = () => {
+      document.getElementById('dtm-input').value = t.dtm;
+      document.querySelectorAll('.tenor-btn').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      doLookup();
+    };
+    c.appendChild(btn);
+  });
+}
+
+// ═══════════════════════════════════════════════════════════════
+//  Data Loading
+// ═══════════════════════════════════════════════════════════════
+async function loadAll() {
+  await Promise.all([loadStatus(), loadCurve(), loadSpreads(), loadMPC()]);
+}
+
+async function refreshAll() {
+  const btn = document.querySelector('.btn-refresh');
+  btn.textContent = '↻ Yenileniyor...';
+  btn.disabled = true;
+  try {
+    await fetch('/api/refresh', {method:'POST'});
+    await loadAll();
+  } catch(e) {
+    console.error(e);
+  }
+  btn.textContent = '↻ Yenile';
+  btn.disabled = false;
+}
+
+async function loadStatus() {
+  try {
+    const r = await fetch('/api/status');
+    const d = await r.json();
+    document.getElementById('hdr-bisttref').textContent = d.bisttref ? d.bisttref.toFixed(2) + '%' : '—';
+    document.getElementById('hdr-grid').textContent = d.grid_size || '—';
+    if (d.last_update) {
+      const t = new Date(d.last_update);
+      document.getElementById('hdr-update').textContent = 
+        t.toLocaleTimeString('tr-TR', {hour:'2-digit', minute:'2-digit', second:'2-digit'});
+    }
+  } catch(e) { console.error(e); }
+}
+
+async function loadCurve() {
+  try {
+    const r = await fetch('/api/curve');
+    curveData = await r.json();
+    renderChart();
+    const maxDTM = curveData[curveData.length-1]?.DTM || 0;
+    const minRate = Math.min(...curveData.filter(d=>d.DTM>0).map(d=>d.spot_ois));
+    const maxRate = Math.max(...curveData.filter(d=>d.DTM>0).map(d=>d.spot_ois));
+    document.getElementById('curve-info').textContent = 
+      `${curveData.length} nokta | ${minRate.toFixed(1)}% – ${maxRate.toFixed(1)}%`;
+  } catch(e) { console.error(e); }
+}
+
+async function loadSpreads() {
+  try {
+    const r = await fetch('/api/spreads');
+    const data = await r.json();
+    const tbody = document.getElementById('spreads-body');
+    if (!data.length) {
+      tbody.innerHTML = '<tr><td colspan="5" style="color:var(--text-muted);text-align:center;padding:2rem">Tahvil verisi yok</td></tr>';
+      return;
+    }
+    tbody.innerHTML = data.map(d => {
+      const cls = d.ois_spread_bps == null ? 'num-neutral' : (d.ois_spread_bps >= 0 ? 'num-pos' : 'num-neg');
+      const spread = d.ois_spread_bps != null ? (d.ois_spread_bps >= 0 ? '+' : '') + d.ois_spread_bps.toFixed(1) : '—';
+      return `<tr>
+        <td style="font-size:0.78rem">${d.isin}</td>
+        <td>${d.maturity}</td>
+        <td style="text-align:right">${d.DTM}</td>
+        <td style="text-align:right">${d.px_last.toFixed(2)}</td>
+        <td style="text-align:right" class="${cls}">${spread}</td>
+      </tr>`;
+    }).join('');
+  } catch(e) { console.error(e); }
+}
+
+async function loadMPC() {
+  try {
+    const r = await fetch('/api/mpc');
+    const data = await r.json();
+    const tbody = document.getElementById('mpc-body');
+    if (!data.length) {
+      tbody.innerHTML = '<tr><td colspan="5" style="color:var(--text-muted);text-align:center;padding:2rem">PPK verisi yok</td></tr>';
+      return;
+    }
+    const maxMPC = Math.max(...data.map(d => d.implied_mpc));
+    tbody.innerHTML = data.map((d, i) => {
+      const delta = i > 0 ? d.implied_mpc - data[i-1].implied_mpc : 0;
+      const deltaStr = i > 0 ? (delta >= 0 ? '+' : '') + (delta*100).toFixed(0) + ' bps' : '';
+      const deltaCls = delta < 0 ? 'num-neg' : delta > 0 ? 'num-pos' : 'num-neutral';
+      const barW = (d.implied_mpc / maxMPC * 100).toFixed(1);
+      return `<tr>
+        <td>${d.ppk_date}</td>
+        <td style="text-align:right">${d.period_days}d</td>
+        <td style="text-align:right">${d.forward_rate.toFixed(2)}%</td>
+        <td style="text-align:right">
+          ${d.implied_mpc.toFixed(2)}%
+          <span style="font-size:0.7rem;margin-left:0.3rem" class="${deltaCls}">${deltaStr}</span>
+        </td>
+        <td><div class="mpc-bar-wrap"><div class="mpc-bar" style="width:${barW}%"></div></div></td>
+      </tr>`;
+    }).join('');
+  } catch(e) { console.error(e); }
+}
+
+// ═══════════════════════════════════════════════════════════════
+//  OIS Curve Chart
+// ═══════════════════════════════════════════════════════════════
+function renderChart() {
+  const ctx = document.getElementById('oisChart').getContext('2d');
+  
+  // Skip row 0 (today, DTM=0)
+  const points = curveData.filter(d => d.DTM > 0);
+  
+  if (oisChart) oisChart.destroy();
+
+  // Dual axis: spot_ois (left) + df (right)
+  oisChart = new Chart(ctx, {
+    type: 'line',
+    data: {
+      labels: points.map(d => d.DTM),
+      datasets: [
+        {
+          label: 'Spot OIS (%)',
+          data: points.map(d => d.spot_ois),
+          borderColor: '#58A6FF',
+          backgroundColor: 'rgba(88,166,255,0.08)',
+          fill: true,
+          tension: 0.3,
+          pointRadius: 0,
+          pointHoverRadius: 5,
+          pointHoverBackgroundColor: '#58A6FF',
+          borderWidth: 2,
+          yAxisID: 'y',
+        },
+        {
+          label: 'Discount Factor',
+          data: points.map(d => d.df),
+          borderColor: '#3FB950',
+          backgroundColor: 'transparent',
+          tension: 0.3,
+          pointRadius: 0,
+          pointHoverRadius: 5,
+          pointHoverBackgroundColor: '#3FB950',
+          borderWidth: 1.5,
+          borderDash: [4, 3],
+          yAxisID: 'y1',
+        }
+      ]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      interaction: {
+        mode: 'index',
+        intersect: false,
+      },
+      onClick: (evt) => {
+        const pts = oisChart.getElementsAtEventForMode(evt, 'index', {intersect: false}, false);
+        if (pts.length > 0) {
+          const idx = pts[0].index;
+          const dtm = points[idx].DTM;
+          document.getElementById('dtm-input').value = dtm;
+          doLookup();
+        }
+      },
+      plugins: {
+        legend: {
+          display: true,
+          position: 'top',
+          align: 'end',
+          labels: {
+            color: '#8B949E',
+            font: {family: "'DM Sans'", size: 11},
+            boxWidth: 16, boxHeight: 2,
+            padding: 16,
+            usePointStyle: false,
+          }
+        },
+        tooltip: {
+          backgroundColor: 'rgba(13,17,23,0.95)',
+          borderColor: '#1B2433',
+          borderWidth: 1,
+          titleColor: '#E6EDF3',
+          bodyColor: '#8B949E',
+          titleFont: {family: "'DM Sans'", weight: '600'},
+          bodyFont: {family: "'JetBrains Mono'", size: 12},
+          padding: 10,
+          displayColors: true,
+          callbacks: {
+            title: (items) => {
+              const dtm = items[0].label;
+              const years = (dtm / 365).toFixed(1);
+              return `DTM: ${dtm} gün (${years}Y)`;
+            },
+            label: (item) => {
+              if (item.datasetIndex === 0) return ` Spot OIS: ${item.raw.toFixed(2)}%`;
+              return ` df: ${item.raw.toFixed(6)}`;
+            }
+          }
+        },
+      },
+      scales: {
+        x: {
+          type: 'linear',
+          title: {display: true, text: 'DTM (gün)', color: '#484F58', font: {family: "'DM Sans'", size: 11}},
+          ticks: {
+            color: '#484F58',
+            font: {family: "'JetBrains Mono'", size: 10},
+            callback: (v) => {
+              if (v === 0) return '0';
+              if (v % 365 === 0) return (v/365) + 'Y';
+              if (v < 365) return v + 'd';
+              return '';
+            },
+            stepSize: 365,
+          },
+          grid: {color: 'rgba(27,36,51,0.6)', lineWidth: 0.5},
+          border: {color: '#1B2433'},
+        },
+        y: {
+          position: 'left',
+          title: {display: true, text: 'Spot OIS (%)', color: '#58A6FF', font: {family: "'DM Sans'", size: 11}},
+          ticks: {color: '#58A6FF', font: {family: "'JetBrains Mono'", size: 10}, callback: v => v.toFixed(0) + '%'},
+          grid: {color: 'rgba(88,166,255,0.06)', lineWidth: 0.5},
+          border: {color: '#1B2433'},
+        },
+        y1: {
+          position: 'right',
+          title: {display: true, text: 'df', color: '#3FB950', font: {family: "'DM Sans'", size: 11}},
+          ticks: {color: '#3FB950', font: {family: "'JetBrains Mono'", size: 10}, callback: v => v.toFixed(2)},
+          grid: {display: false},
+          border: {color: '#1B2433'},
+          min: 0, max: 1,
+        }
+      }
+    }
+  });
+}
+
+// ═══════════════════════════════════════════════════════════════
+//  Tenor Lookup
+// ═══════════════════════════════════════════════════════════════
+async function doLookup() {
+  const dtm = parseFloat(document.getElementById('dtm-input').value);
+  if (!dtm || dtm < 0) return;
+
+  try {
+    const r = await fetch(`/api/lookup?dtm=${dtm}`);
+    const d = await r.json();
+    if (d.error) return;
+
+    document.getElementById('res-rate').textContent = d.spot_ois.toFixed(2) + '%';
+    document.getElementById('res-df').textContent = d.df.toFixed(6);
+    document.getElementById('res-zc').textContent = d.zc_rate.toFixed(2) + '%';
+    document.getElementById('res-gu').textContent = d.gross_up ? d.gross_up.toFixed(6) : '—';
+
+    const years = (dtm / 365).toFixed(2);
+    document.getElementById('crosshair-info').innerHTML = 
+      `<span style="color:var(--blue)">DTM ${dtm}</span> gün ≈ <span style="color:var(--amber)">${years}Y</span>`;
+
+    // Highlight on chart
+    highlightOnChart(dtm);
+  } catch(e) { console.error(e); }
+}
+
+function highlightOnChart(dtm) {
+  if (!oisChart) return;
+  // Add a vertical line annotation via plugin (simple approach: use a point)
+  const points = curveData.filter(d => d.DTM > 0);
+  const rate = parseFloat(document.getElementById('res-rate').textContent);
+  
+  // Update or add annotation dataset
+  if (oisChart.data.datasets.length > 2) {
+    oisChart.data.datasets[2].data = [{x: dtm, y: rate}];
+  } else {
+    oisChart.data.datasets.push({
+      label: 'Lookup',
+      data: [{x: dtm, y: rate}],
+      type: 'scatter',
+      borderColor: '#D29922',
+      backgroundColor: '#D29922',
+      pointRadius: 7,
+      pointHoverRadius: 9,
+      pointStyle: 'crossRot',
+      borderWidth: 2,
+      yAxisID: 'y',
+      showLine: false,
+    });
+  }
+  oisChart.update('none');
+}
+</script>
+</body>
+</html>
