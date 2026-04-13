@@ -280,29 +280,43 @@ function BondTab({bonds,oisNodes}){
       </div>
     </div>
 
-    {/* Table */}
+    {/* Table — grouped by type */}
     <div style={{overflowX:"auto"}}>
       <table style={{borderCollapse:"collapse",width:"100%"}}><thead><tr>
-        {["ISIN","Mat","Days","Cpn","Type","Last","OIS PV","Yield","Z-Spread",""].map(h=>
-          <th key={h} style={{...hs,textAlign:["ISIN","Mat","Type"].includes(h)?"left":"right"}}>{h}</th>)}
+        {["ISIN","Mat","Days","Cpn","Last","OIS PV","Yield","Z-Spread",""].map(h=>
+          <th key={h} style={{...hs,textAlign:["ISIN","Mat"].includes(h)?"left":"right"}}>{h}</th>)}
       </tr></thead><tbody>
-        {bonds.map((b,i)=>{
-          const sc=b.zspread===null?B.tm:b.zspread>0.5?B.rd:b.zspread<-0.5?B.gn:B.tx;
-          const barW=b.zspread!==null?Math.abs(b.zspread)/maxSpread*100:0;
-          const tl=b.type==="zcb"?"ZCB":b.type==="flt"?"FLT":"FIX";
-          const tc=b.type==="zcb"?B.am:b.type==="flt"?B.cy:B.bl;
-          return <tr key={b.isin+i} style={{background:i%2?`${B.sa}44`:"transparent"}}>
-            <td style={{...cs,fontWeight:600,fontSize:"11px"}}>{b.isin}</td>
-            <td style={{...cs,color:B.tm,fontSize:"11px"}}>{b.mat}</td>
-            <td style={{...cs,textAlign:"right",color:B.tm}}>{b.totalDays}</td>
-            <td style={{...cs,textAlign:"right"}}>{b.cpn?b.cpn.toFixed(1)+"%":"—"}</td>
-            <td style={cs}><span style={{color:tc,fontSize:"10px",fontWeight:700,padding:"1px 5px",background:`${tc}15`,borderRadius:"3px"}}>{tl}</span></td>
-            <td style={{...cs,textAlign:"right",fontWeight:500}}>{b.last.toFixed(3)}</td>
-            <td style={{...cs,textAlign:"right",color:B.tm}}>{b.pvFlat!==null?b.pvFlat.toFixed(2):"—"}</td>
-            <td style={{...cs,textAlign:"right",color:B.bl}}>{b.bondYield!=null?b.bondYield.toFixed(2)+"%":"—"}</td>
-            <td style={{...cs,textAlign:"right"}}><span style={{color:sc,fontWeight:600}}>{b.zspread!==null?(b.zspread>0?"+":"")+b.zspread.toFixed(1)+"%":"—"}</span></td>
-            <td style={{...cs,width:"70px",padding:"6px 4px"}}>{b.zspread!==null&&<div style={{width:"70px",height:"12px",background:B.sa,borderRadius:"2px",overflow:"hidden",display:"flex",justifyContent:b.zspread>0?"flex-start":"flex-end"}}><div style={{width:`${Math.max(barW,3)}%`,height:"100%",background:b.zspread>0?B.rd:B.gn,borderRadius:"2px",opacity:.6}}/></div>}</td>
-          </tr>;
+        {[
+          {key:"flt",label:"TLREF-Linked (Floating)",color:B.cy,desc:"Quarterly coupon, CFs from OIS forwards"},
+          {key:"fix",label:"Fixed Coupon",color:B.bl,desc:"Semi-annual fixed coupon"},
+          {key:"zcb",label:"Zero Coupon",color:B.am,desc:"Discount instruments"},
+        ].map(grp=>{
+          const items=bonds.filter(b=>b.type===grp.key);
+          if(!items.length) return null;
+          return [
+            <tr key={grp.key+"hdr"}>
+              <td colSpan={9} style={{padding:"10px 10px 4px",borderBottom:`1px solid ${B.bd}`,background:B.bg}}>
+                <span style={{color:grp.color,fontSize:"11px",fontWeight:700,letterSpacing:"0.5px"}}>{grp.label}</span>
+                <span style={{color:B.tm,fontSize:"10px",marginLeft:"8px"}}>{grp.desc}</span>
+                <span style={{color:B.tm,fontSize:"10px",float:"right"}}>{items.length} bonds</span>
+              </td>
+            </tr>,
+            ...items.map((b,i)=>{
+              const sc=b.zspread===null?B.tm:b.zspread>0.5?B.rd:b.zspread<-0.5?B.gn:B.tx;
+              const barW=b.zspread!==null?Math.abs(b.zspread)/maxSpread*100:0;
+              return <tr key={b.isin+i} style={{background:i%2?`${B.sa}44`:"transparent"}}>
+                <td style={{...cs,fontWeight:600,fontSize:"11px"}}>{b.isin}</td>
+                <td style={{...cs,color:B.tm,fontSize:"11px"}}>{b.mat}</td>
+                <td style={{...cs,textAlign:"right",color:B.tm}}>{b.totalDays}</td>
+                <td style={{...cs,textAlign:"right"}}>{b.cpn?b.cpn.toFixed(1)+"%":"—"}</td>
+                <td style={{...cs,textAlign:"right",fontWeight:500}}>{b.last.toFixed(3)}</td>
+                <td style={{...cs,textAlign:"right",color:B.tm}}>{b.pvFlat!==null?b.pvFlat.toFixed(2):"—"}</td>
+                <td style={{...cs,textAlign:"right",color:B.bl}}>{b.bondYield!=null?b.bondYield.toFixed(2)+"%":"—"}</td>
+                <td style={{...cs,textAlign:"right"}}><span style={{color:sc,fontWeight:600}}>{b.zspread!==null?(b.zspread>0?"+":"")+b.zspread.toFixed(1)+"%":"—"}</span></td>
+                <td style={{...cs,width:"70px",padding:"6px 4px"}}>{b.zspread!==null&&<div style={{width:"70px",height:"12px",background:B.sa,borderRadius:"2px",overflow:"hidden",display:"flex",justifyContent:b.zspread>0?"flex-start":"flex-end"}}><div style={{width:`${Math.max(barW,3)}%`,height:"100%",background:b.zspread>0?B.rd:B.gn,borderRadius:"2px",opacity:.6}}/></div>}</td>
+              </tr>;
+            })
+          ];
         })}
       </tbody></table>
     </div>
