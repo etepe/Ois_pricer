@@ -174,7 +174,7 @@ function Chart({data,oisCurve,title,yLabel,showOis=true,w=640,h=220}){
         {data.map((d,i)=>{
           const cx=sx(d.x),cy=sy(d.y);
           if(!isFinite(cy))return null;
-          return<g key={i}>
+          return <g key={i}>
             <circle cx={cx} cy={cy} r="4.5" fill={typeColor(d.type)} opacity="0.85" stroke={B.bg} strokeWidth="1"/>
             {d.label&&<text x={cx} y={cy-8} textAnchor="middle" fill={B.tm} fontSize="7" fontFamily="'JetBrains Mono',monospace">{d.label}</text>}
           </g>;
@@ -202,9 +202,9 @@ function Chart({data,oisCurve,title,yLabel,showOis=true,w=640,h=220}){
 // ─── Styles ──────────────────────────────────────────────────────────
 const cs={padding:"6px 10px",borderBottom:`1px solid ${B.bd}`,fontSize:"12px",fontFamily:"'JetBrains Mono','Fira Code',monospace",whiteSpace:"nowrap"};
 const hs={...cs,color:B.tm,fontWeight:600,fontSize:"10px",textTransform:"uppercase",letterSpacing:"0.5px",position:"sticky",top:0,background:B.sf,zIndex:2};
-function CV({v,f=1,s="%"}){const c=v>0.005?B.rd:v<-0.005?B.gn:B.tm;return<span style={{color:c,fontFamily:"'JetBrains Mono',monospace",fontSize:"12px"}}>{v>0.005?"+":""}{v.toFixed(f)}{s}</span>;}
-function RI({v,onChange,w="58px"}){return<input type="number" step="0.25" value={v} onChange={e=>onChange(+e.target.value||0)} style={{width:w,background:B.bg,border:`1px solid ${B.bd}`,borderRadius:"3px",color:B.bl,padding:"3px 5px",fontSize:"12px",fontFamily:"'JetBrains Mono',monospace",textAlign:"right",outline:"none"}} onFocus={e=>e.target.style.borderColor=B.bl} onBlur={e=>e.target.style.borderColor=B.bd}/>;}
-function DI({v,onChange}){return<input type="number" step="25" value={v} onChange={e=>onChange(+e.target.value||0)} style={{width:"52px",background:v?"#1a1500":B.bg,border:`1px solid ${v?B.am:B.bd}`,borderRadius:"3px",color:v>0?B.rd:v<0?B.gn:B.tm,padding:"3px 5px",fontSize:"12px",fontFamily:"'JetBrains Mono',monospace",textAlign:"right",outline:"none"}} onFocus={e=>e.target.style.borderColor=B.am} onBlur={e=>e.target.style.borderColor=v?B.am:B.bd}/>;}
+function CV({v,f=1,s="%"}){const c=v>0.005?B.rd:v<-0.005?B.gn:B.tm;return <span style={{color:c,fontFamily:"'JetBrains Mono',monospace",fontSize:"12px"}}>{v>0.005?"+":""}{v.toFixed(f)}{s}</span>;}
+function RI({v,onChange,w="58px"}){return <input type="number" step="0.25" value={v} onChange={e=>onChange(+e.target.value||0)} style={{width:w,background:B.bg,border:`1px solid ${B.bd}`,borderRadius:"3px",color:B.bl,padding:"3px 5px",fontSize:"12px",fontFamily:"'JetBrains Mono',monospace",textAlign:"right",outline:"none"}} onFocus={e=>e.target.style.borderColor=B.bl} onBlur={e=>e.target.style.borderColor=B.bd}/>;}
+function DI({v,onChange}){return <input type="number" step="25" value={v} onChange={e=>onChange(+e.target.value||0)} style={{width:"52px",background:v?"#1a1500":B.bg,border:`1px solid ${v?B.am:B.bd}`,borderRadius:"3px",color:v>0?B.rd:v<0?B.gn:B.tm,padding:"3px 5px",fontSize:"12px",fontFamily:"'JetBrains Mono',monospace",textAlign:"right",outline:"none"}} onFocus={e=>e.target.style.borderColor=B.am} onBlur={e=>e.target.style.borderColor=v?B.am:B.bd}/>;}
 
 // ─── Main ────────────────────────────────────────────────────────────
 export default function App(){
@@ -269,7 +269,7 @@ function BondTab({bonds,oisNodes}){
   // Spread chart data
   const spreadData=validBonds.map(b=>({x:b.totalDays,y:b.zspread,type:b.type,label:Math.abs(b.zspread)>2?b.isin.slice(3,11):""}));
 
-  return<div>
+  return <div>
     {/* Charts */}
     <div style={{display:"flex",gap:"12px",flexWrap:"wrap",marginBottom:"16px"}}>
       <div style={{flex:"1 1 300px",minWidth:"280px"}}>
@@ -291,7 +291,7 @@ function BondTab({bonds,oisNodes}){
           const barW=b.zspread!==null?Math.abs(b.zspread)/maxSpread*100:0;
           const tl=b.type==="zcb"?"ZCB":b.type==="flt"?"FLT":"FIX";
           const tc=b.type==="zcb"?B.am:b.type==="flt"?B.cy:B.bl;
-          return<tr key={b.isin+i} style={{background:i%2?`${B.sa}44`:"transparent"}}>
+          return <tr key={b.isin+i} style={{background:i%2?`${B.sa}44`:"transparent"}}>
             <td style={{...cs,fontWeight:600,fontSize:"11px"}}>{b.isin}</td>
             <td style={{...cs,color:B.tm,fontSize:"11px"}}>{b.mat}</td>
             <td style={{...cs,textAlign:"right",color:B.tm}}>{b.totalDays}</td>
@@ -314,15 +314,15 @@ function BondTab({bonds,oisNodes}){
   </div>;
 }
 
-function StatBox({label,value}){return<div style={{background:B.sf,border:`1px solid ${B.bd}`,borderRadius:"6px",padding:"10px 16px",borderLeft:`3px solid ${B.bl}`,minWidth:"90px"}}><div style={{fontSize:"9px",color:B.tm,textTransform:"uppercase",letterSpacing:"0.5px",marginBottom:"4px"}}>{label}</div><div style={{fontSize:"15px",fontWeight:700,color:B.tx,fontFamily:"'JetBrains Mono',monospace"}}>{value}</div></div>;}
+function StatBox({label,value}){return <div style={{background:B.sf,border:`1px solid ${B.bd}`,borderRadius:"6px",padding:"10px 16px",borderLeft:`3px solid ${B.bl}`,minWidth:"90px"}}><div style={{fontSize:"9px",color:B.tm,textTransform:"uppercase",letterSpacing:"0.5px",marginBottom:"4px"}}>{label}</div><div style={{fontSize:"15px",fontWeight:700,color:B.tx,fontFamily:"'JetBrains Mono',monospace"}}>{value}</div></div>;}
 
 // ─── PPK TAB ─────────────────────────────────────────────────────────
-function PPKTab({ppk,tlref,cum}){return<div>
+function PPKTab({ppk,tlref,cum}){return <div>
   <div style={{marginBottom:"12px",fontSize:"12px",color:B.tm}}>Market-implied policy rate path (Act/365 forwards between PPK meetings).</div>
   <div style={{overflowX:"auto"}}><table style={{borderCollapse:"collapse",width:"100%"}}><thead><tr>
     {["PPK Date","Period","Implied Rate","Chg","Cum vs TLREF","DF"].map(h=><th key={h} style={{...hs,textAlign:h==="PPK Date"?"left":"right"}}>{h}</th>)}
   </tr></thead><tbody>
-    {ppk.map((p,i)=>{const chg=i===0?p.ir-tlref:p.ir-ppk[i-1].ir;return<tr key={p.date} style={{background:i%2?`${B.sa}44`:"transparent"}}>
+    {ppk.map((p,i)=>{const chg=i===0?p.ir-tlref:p.ir-ppk[i-1].ir;return <tr key={p.date} style={{background:i%2?`${B.sa}44`:"transparent"}}>
       <td style={{...cs,fontWeight:500}}>{p.date}</td><td style={{...cs,textAlign:"right",color:B.tm}}>{p.pd}d</td>
       <td style={{...cs,textAlign:"right"}}><span style={{color:B.bl,fontWeight:600}}>{p.ir.toFixed(2)}%</span></td>
       <td style={{...cs,textAlign:"right"}}><CV v={chg*100} f={0} s=" bp"/></td>
@@ -333,7 +333,7 @@ function PPKTab({ppk,tlref,cum}){return<div>
 </div>;}
 
 // ─── SCENARIO TAB ────────────────────────────────────────────────────
-function ScTab({ppk,sD,rD,hd,quotes,qt}){return<div style={{display:"flex",gap:"20px",flexWrap:"wrap"}}>
+function ScTab({ppk,sD,rD,hd,quotes,qt}){return <div style={{display:"flex",gap:"20px",flexWrap:"wrap"}}>
   <div style={{flex:"1 1 420px",minWidth:"360px"}}>
     <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:"8px"}}>
       <div style={{fontSize:"12px",color:B.tm}}>PPK Rate Deviations (bp)</div>
@@ -352,17 +352,17 @@ function ScTab({ppk,sD,rD,hd,quotes,qt}){return<div style={{display:"flex",gap:"
   <div style={{flex:"1 1 350px",minWidth:"280px"}}>
     <div style={{fontSize:"12px",color:B.tm,marginBottom:"8px"}}>OIS Spot Rates ({qt.toUpperCase()})</div>
     <table style={{borderCollapse:"collapse",width:"100%"}}><thead><tr>{["Tenor","Rate"].map(h=><th key={h} style={{...hs,textAlign:h==="Tenor"?"left":"right"}}>{h}</th>)}</tr></thead><tbody>
-      {quotes.map((q,i)=>{const r=qt==="bid"?q.bid:qt==="ask"?q.ask:(q.bid+q.ask)/2;return<tr key={q.t} style={{background:i%2?`${B.sa}44`:"transparent"}}><td style={{...cs,fontWeight:600}}>{q.t}</td><td style={{...cs,textAlign:"right",color:B.bl}}>{r.toFixed(2)}%</td></tr>;})}
+      {quotes.map((q,i)=>{const r=qt==="bid"?q.bid:qt==="ask"?q.ask:(q.bid+q.ask)/2;return <tr key={q.t} style={{background:i%2?`${B.sa}44`:"transparent"}}><td style={{...cs,fontWeight:600}}>{q.t}</td><td style={{...cs,textAlign:"right",color:B.bl}}>{r.toFixed(2)}%</td></tr>;})}
     </tbody></table>
   </div>
 </div>;}
 
 // ─── MARKET TAB ──────────────────────────────────────────────────────
-function MktTab({q,uQ,qt,n}){return<div style={{display:"flex",gap:"20px",flexWrap:"wrap"}}>
+function MktTab({q,uQ,qt,n}){return <div style={{display:"flex",gap:"20px",flexWrap:"wrap"}}>
   <div style={{flex:"1 1 480px"}}>
     <div style={{fontSize:"12px",color:B.tm,marginBottom:"8px"}}>OIS Par Swap Quotes</div>
     <table style={{borderCollapse:"collapse",width:"100%"}}><thead><tr>{["Tenor","Bid","Ask","Mid","Used"].map(h=><th key={h} style={{...hs,textAlign:h==="Tenor"?"left":"right"}}>{h}</th>)}</tr></thead><tbody>
-      {q.map((x,i)=>{const mid=(x.bid+x.ask)/2,used=qt==="bid"?x.bid:qt==="ask"?x.ask:mid;return<tr key={x.t} style={{background:i%2?`${B.sa}44`:"transparent"}}>
+      {q.map((x,i)=>{const mid=(x.bid+x.ask)/2,used=qt==="bid"?x.bid:qt==="ask"?x.ask:mid;return <tr key={x.t} style={{background:i%2?`${B.sa}44`:"transparent"}}>
         <td style={{...cs,fontWeight:600}}>{x.t}</td><td style={{...cs,textAlign:"right"}}><RI v={x.bid} onChange={v=>uQ(i,"bid",v)}/></td>
         <td style={{...cs,textAlign:"right"}}><RI v={x.ask} onChange={v=>uQ(i,"ask",v)}/></td>
         <td style={{...cs,textAlign:"right",color:B.tm}}>{mid.toFixed(2)}%</td>
@@ -373,7 +373,7 @@ function MktTab({q,uQ,qt,n}){return<div style={{display:"flex",gap:"20px",flexWr
   <div style={{flex:"1 1 320px"}}>
     <div style={{fontSize:"12px",color:B.tm,marginBottom:"8px"}}>Bootstrapped Zero Curve</div>
     <table style={{borderCollapse:"collapse",width:"100%"}}><thead><tr>{["Days","Tenor","DF","Zero Rate"].map(h=><th key={h} style={{...hs,textAlign:h==="Days"||h==="Tenor"?"left":"right"}}>{h}</th>)}</tr></thead><tbody>
-      {n.filter(x=>x.d>0).map((x,i)=>{const zr=(1/x.f-1)*365/x.d*100;return<tr key={x.d} style={{background:i%2?`${B.sa}44`:"transparent"}}>
+      {n.filter(x=>x.d>0).map((x,i)=>{const zr=(1/x.f-1)*365/x.d*100;return <tr key={x.d} style={{background:i%2?`${B.sa}44`:"transparent"}}>
         <td style={cs}>{x.d}</td><td style={{...cs,color:B.tm,fontSize:"10px"}}>{x.t}</td>
         <td style={{...cs,textAlign:"right",color:B.cy}}>{x.f.toFixed(6)}</td>
         <td style={{...cs,textAlign:"right",color:B.bl}}>{zr.toFixed(2)}%</td>
