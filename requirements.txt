@@ -3,5 +3,7 @@ pandas>=2.0
 scipy>=1.10
 openpyxl>=3.1
 flask>=3.0
+holidays>=0.40
+
 # Bloomberg bağlantısı için (şirkette):
 # blpapi>=3.19
