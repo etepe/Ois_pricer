@@ -39,15 +39,15 @@ const Q_OIS=[
 {t:"5Y",mo:60,dy:0,bid:31.79,ask:32.02},
 ];
 
-// Offshore TRY — TRYI series from FX_market_2.xlsm (deposit rates + DFs)
+// Offshore TRY — TRYI series (Act/360 convention)
 const Q_OFF=[
 {t:"ON",d:0,rate:31.75,df:1,tk:"TRYION"},{t:"TN",d:1,rate:28.00,df:0.99922,tk:"TRYITN"},
-{t:"1W",d:7,rate:30.35,df:0.99491,tk:"TRYI1W"},{t:"2W",d:14,rate:33.15,df:0.98804,tk:"TRYI2W"},
-{t:"1M",d:30,rate:34.53,df:0.97278,tk:"TRYI1M"},{t:"2M",d:63,rate:36.35,df:0.94092,tk:"TRYI2M"},
-{t:"3M",d:91,rate:37.40,df:0.91434,tk:"TRYI3M"},{t:"6M",d:183,rate:38.75,df:0.83610,tk:"TRYI6M"},
-{t:"9M",d:275,rate:39.69,df:0.76793,tk:"TRYI9M"},{t:"1Y",d:365,rate:41.02,df:0.70628,tk:"TRYI12M"},
-{t:"18M",d:548,rate:38.05,df:0.60944,tk:"TRYI18M"},{t:"2Y",d:731,rate:39.04,df:0.51556,tk:"TRYI2Y"},
-{t:"3Y",d:1096,rate:36.94,df:0.39392,tk:"TRYI3Y"},
+{t:"1W",d:7,rate:30.35,df:0.99411,tk:"TRYI1W"},{t:"2W",d:14,rate:33.15,df:0.98722,tk:"TRYI2W"},
+{t:"1M",d:30,rate:34.53,df:0.97124,tk:"TRYI1M"},{t:"2M",d:63,rate:36.35,df:0.94034,tk:"TRYI2M"},
+{t:"3M",d:91,rate:37.40,df:0.91365,tk:"TRYI3M"},{t:"6M",d:183,rate:38.75,df:0.83543,tk:"TRYI6M"},
+{t:"9M",d:275,rate:39.69,df:0.76710,tk:"TRYI9M"},{t:"1Y",d:365,rate:41.02,df:0.70629,tk:"TRYI12M"},
+{t:"18M",d:548,rate:38.05,df:0.63321,tk:"TRYI18M"},{t:"2Y",d:731,rate:39.04,df:0.55768,tk:"TRYI2Y"},
+{t:"3Y",d:1096,rate:36.94,df:0.47101,tk:"TRYI3Y"},
 ];
 
 const PPK_DATES=["2026-04-24","2026-06-12","2026-07-24","2026-09-11","2026-10-23","2026-12-11","2027-01-22","2027-03-18","2027-04-26","2027-06-11","2027-07-23","2027-09-03","2027-10-15","2027-11-26","2028-01-07","2028-02-18","2028-03-31","2028-05-12","2028-06-23","2028-08-04","2028-09-15","2028-10-27","2028-12-08","2029-01-19","2029-03-02","2029-04-13"];
@@ -70,7 +70,7 @@ function idf(nodes,td){
   if(td<=lo.d)return lo.f;if(td>=hi.d){const z=-Math.log(hi.f)/hi.d*365;return Math.exp(-z*td/365);}
   return Math.exp(Math.log(lo.f)+(td-lo.d)/(hi.d-lo.d)*(Math.log(hi.f)-Math.log(lo.f)));
 }
-function zr(nodes,d){return d>0?(1/idf(nodes,d)-1)*365/d*100:0;}
+function zr(nodes,d,dc=365){return d>0?(1/idf(nodes,d)-1)*dc/d*100:0;}
 
 // Bootstrap OIS (quarterly par swap rates)
 function bsOIS(quotes,vd){
@@ -103,8 +103,8 @@ function genCFs(bond,vd,oisN){
   const cpp=bond.cpn/bond.freq;return dates.map((dc,i)=>({days:dc,cf:i===dates.length-1?cpp+100:cpp}));
 }
 
-function solveZ(cfs,nodes,target,prd){
-  function pv(s){let v=0;for(const{days,cf}of cfs){if(days<=0)continue;const df=idf(nodes,days);if(df<=0)continue;const r=(Math.pow(1/df,prd/days)-1)*365/prd;v+=cf/Math.pow(1+(r+s)/365*prd,days/prd);}return v;}
+function solveZ(cfs,nodes,target,prd,dc=365){
+  function pv(s){let v=0;for(const{days,cf}of cfs){if(days<=0)continue;const df=idf(nodes,days);if(df<=0)continue;const r=(Math.pow(1/df,prd/days)-1)*dc/prd;v+=cf/Math.pow(1+(r+s)/dc*prd,days/prd);}return v;}
   let lo=-0.5,hi=0.5;for(let i=0;i<120;i++){const mid=(lo+hi)/2;if(Math.abs(pv(mid)-target)<1e-4)return mid;if(pv(mid)>target)lo=mid;else hi=mid;}return (lo+hi)/2;
 }
 
@@ -113,9 +113,9 @@ function priceBonds(bonds,oisN,offN,vd){
     const td=db(vd,pd(bond.mat));if(td<=0)return null;
     const prd=bond.freq===4?91:182;const cfs=genCFs(bond,vd,oisN);if(!cfs.length)return null;
     let pvO=0;for(const{days,cf}of cfs)if(days>0)pvO+=cf*idf(oisN,days);
-    const zsO=solveZ(cfs,oisN,bond.last,prd)*100;
-    const zsX=solveZ(cfs,offN,bond.last,prd)*100;
-    return {...bond,td,zsO,zsX,pvO,yO:zr(oisN,td)+zsO};
+    const zsO=solveZ(cfs,oisN,bond.last,prd,365)*100;
+    const zsX=solveZ(cfs,offN,bond.last,prd,360)*100;
+    return {...bond,td,zsO,zsX,pvO,yO:zr(oisN,td,365)+zsO};
   }).filter(Boolean).sort((a,b)=>a.td-b.td);
 }
 
@@ -160,7 +160,7 @@ export default function App(){
   const[offQ,setXQ]=useState(Q_OFF);
   const[tab,setTab]=useState("bonds");
   const uO=useCallback((i,f,v)=>setOQ(p=>{const n=[...p];n[i]={...n[i],[f]:v};return n;}),[]);
-  const uX=useCallback((i,v)=>setXQ(p=>{const n=[...p];n[i]={...n[i],rate:v,df:1/(1+v/100*n[i].d/365)};return n;}),[]);
+  const uX=useCallback((i,v)=>setXQ(p=>{const n=[...p];n[i]={...n[i],rate:v,df:1/(1+v/100*n[i].d/360)};return n;}),[]);
 
   const vd=useMemo(()=>addBD(pd(td),1),[td]);
   const oisN=useMemo(()=>bsOIS(prepOIS(oisQ,qt),vd),[oisQ,qt,vd]);
@@ -205,8 +205,8 @@ export default function App(){
 function BondTab({bonds,oisN,offN}){
   const vb=bonds.filter(b=>Math.abs(b.zsO)<20);
   const mx=Math.max(...vb.map(b=>Math.abs(b.zsO)),1);
-  const oisC=oisN.filter(n=>n.d>0&&n.d<=1600).map(n=>({x:n.d,y:zr(oisN,n.d)}));
-  const offC=offN.filter(n=>n.d>0&&n.d<=1600).map(n=>({x:n.d,y:zr(offN,n.d)}));
+  const oisC=oisN.filter(n=>n.d>0&&n.d<=1600).map(n=>({x:n.d,y:zr(oisN,n.d,365)}));
+  const offC=offN.filter(n=>n.d>0&&n.d<=1600).map(n=>({x:n.d,y:zr(offN,n.d,360)}));
   const tc=t=>t==="zcb"?C.am:t==="flt"?C.cy:C.bl;
 
   return <div>
@@ -248,21 +248,21 @@ function BondTab({bonds,oisN,offN}){
 
 // ─── CURVES ──────────────────────────────────────────────────────────
 function CurveTab({oisN,offN}){
-  const oisP=oisN.filter(n=>n.d>0&&n.d<=1600).map(n=>({x:n.d,y:zr(oisN,n.d)}));
-  const offP=offN.filter(n=>n.d>0&&n.d<=1600).map(n=>({x:n.d,y:zr(offN,n.d)}));
-  const basis=oisN.filter(n=>n.d>=7&&n.d<=1600).map(n=>({d:n.d,t:n.t,o:zr(oisN,n.d),x:zr(offN,n.d),b:(zr(offN,n.d)-zr(oisN,n.d))*100}));
+  const oisP=oisN.filter(n=>n.d>0&&n.d<=1600).map(n=>({x:n.d,y:zr(oisN,n.d,365)}));
+  const offP=offN.filter(n=>n.d>0&&n.d<=1600).map(n=>({x:n.d,y:zr(offN,n.d,360)}));
+  const basis=oisN.filter(n=>n.d>=7&&n.d<=1600).map(n=>({d:n.d,t:n.t,o:zr(oisN,n.d,365),x:zr(offN,n.d,360),b:(zr(offN,n.d,360)-zr(oisN,n.d,365))*100}));
 
   return <div>
     <div style={{display:"flex",gap:"10px",flexWrap:"wrap",marginBottom:"14px"}}>
       <div style={{flex:"1 1 300px",minWidth:"270px"}}>
-        <Chart title="Zero Curves: Onshore OIS vs Offshore TRYI" yLabel="%" lines={[{pts:oisP,color:C.ois,label:"OIS (TYSO)"},{pts:offP,color:C.off,label:"Offshore (TRYI)"}]} dots={[]}/>
+        <Chart title="Zero Curves: OIS (Act/365) vs Offshore (Act/360)" yLabel="%" lines={[{pts:oisP,color:C.ois,label:"OIS (Act/365)"},{pts:offP,color:C.off,label:"Offshore (Act/360)"}]} dots={[]}/>
       </div>
       <div style={{flex:"1 1 300px",minWidth:"270px"}}>
         <Chart title="Offshore − OIS Basis (bp)" yLabel="bp" lines={[{pts:basis.map(b=>({x:b.d,y:b.b})),color:C.off,label:"Basis"}]} dots={basis.map(b=>({x:b.d,y:b.b,color:C.off}))} zLine/>
       </div>
     </div>
     <div style={{overflowX:"auto"}}><table style={{borderCollapse:"collapse",width:"100%",maxWidth:"650px"}}><thead><tr>
-      {["Tenor","Days","OIS Zero","Offshore Zero","Basis"].map(h=> <th key={h} style={{...hs,textAlign:h==="Tenor"?"left":"right"}}>{h}</th>)}
+      {["Tenor","Days","OIS (365)","Offshore (360)","Basis"].map(h=> <th key={h} style={{...hs,textAlign:h==="Tenor"?"left":"right"}}>{h}</th>)}
     </tr></thead><tbody>
       {basis.map((b,i)=> <tr key={i} style={{background:i%2?`${C.sa}44`:"transparent"}}>
         <td style={{...cs,fontWeight:600}}>{b.t}</td>
@@ -307,7 +307,7 @@ function DataTab({oisQ,offQ,uO,uX,qt,oisN}){return <div style={{display:"flex",g
     </tbody></table>
   </div>
   <div style={{flex:"1 1 320px"}}>
-    <div style={{fontSize:"12px",color:C.off,fontWeight:600,marginBottom:"6px"}}>Offshore TRY (TRYI) <span style={{color:C.tm,fontWeight:400,fontSize:"10px"}}>implied deposit rates</span></div>
+    <div style={{fontSize:"12px",color:C.off,fontWeight:600,marginBottom:"6px"}}>Offshore TRY (TRYI · Act/360) <span style={{color:C.tm,fontWeight:400,fontSize:"10px"}}>implied deposit rates</span></div>
     <table style={{borderCollapse:"collapse",width:"100%"}}><thead><tr>
       {["Tenor","Ticker","Days","Rate","DF"].map(h=> <th key={h} style={{...hs,textAlign:["Tenor","Ticker"].includes(h)?"left":"right"}}>{h}</th>)}
     </tr></thead><tbody>
