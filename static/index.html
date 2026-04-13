@@ -48,14 +48,18 @@ body{background:var(--bg);color:var(--text);font-family:var(--head);min-height:1
 .mtable thead th{text-align:left;padding:.4rem .6rem;color:var(--dim);font-weight:500;font-size:.68rem;text-transform:uppercase;letter-spacing:.05em;border-bottom:1px solid var(--border)}
 .mtable tbody td{padding:.35rem .6rem;border-bottom:1px solid rgba(27,36,51,.4);vertical-align:middle}
 .mtable tbody tr:hover{background:var(--bg-hover)}
-.slider-cell{display:flex;align-items:center;gap:.4rem}
-.slider{-webkit-appearance:none;appearance:none;flex:1;height:4px;border-radius:2px;background:var(--border);outline:none;cursor:pointer}
-.slider::-webkit-slider-thumb{-webkit-appearance:none;width:14px;height:14px;border-radius:50%;cursor:pointer;border:2px solid var(--bg-card)}
-.slider.neg::-webkit-slider-thumb{background:var(--green)}
-.slider.pos::-webkit-slider-thumb{background:var(--red)}
-.slider.zero::-webkit-slider-thumb{background:var(--dim)}
-.delta-val{font-family:var(--mono);font-weight:600;width:3.5rem;text-align:right;font-size:.8rem}
-.delta-neg{color:var(--green)}.delta-pos{color:var(--red)}.delta-zero{color:var(--dim)}
+.slider-cell{display:flex;align-items:center;gap:0}
+.step-btn{background:var(--bg);border:1px solid var(--border);color:var(--muted);width:28px;height:28px;display:flex;align-items:center;justify-content:center;cursor:pointer;font-size:13px;font-weight:700;transition:all .12s;user-select:none;line-height:1}
+.step-btn:hover{background:var(--bg-hover);color:var(--text);border-color:var(--blue)}
+.step-btn:active{background:rgba(88,166,255,.15)}
+.step-btn.dn{border-radius:4px 0 0 4px;color:var(--green)}
+.step-btn.up{border-radius:0 4px 4px 0;color:var(--red)}
+.step-btn.dn:hover{border-color:var(--green);background:rgba(63,185,80,.1)}
+.step-btn.up:hover{border-color:var(--red);background:rgba(248,81,73,.1)}
+.delta-input{width:52px;height:28px;border:1px solid var(--border);border-left:none;border-right:none;background:var(--bg);color:var(--text);font-family:var(--mono);font-size:.82rem;font-weight:600;text-align:center;outline:none;-moz-appearance:textfield}
+.delta-input::-webkit-inner-spin-button,.delta-input::-webkit-outer-spin-button{-webkit-appearance:none;margin:0}
+.delta-input:focus{border-color:var(--blue);background:rgba(88,166,255,.05)}
+.delta-input.neg{color:var(--green)}.delta-input.pos{color:var(--red)}.delta-input.zero{color:var(--dim)}
 .rate-val{font-family:var(--mono);font-weight:500;color:var(--amber);text-align:right}
 .fwd-chart{width:100%;height:280px}
 table.dtable{width:100%;border-collapse:collapse;font-size:.78rem}
@@ -202,19 +206,29 @@ function renderMPC(){
   tb.innerHTML=meetings.map((m,i)=>{
     cum+=m.delta_bps/100;
     const dc=m.delta_bps<0?'neg':m.delta_bps>0?'pos':'zero';
-    const dtc='delta-'+dc;
-    const dStr=m.delta_bps>0?'+'+m.delta_bps:m.delta_bps===0?'0':''+m.delta_bps;
     return`<tr>
       <td style="color:var(--muted);white-space:nowrap">${m.date}</td>
       <td style="color:var(--dim);text-align:center;font-family:var(--mono);font-size:.72rem">${m.period_days}d</td>
-      <td><div class="slider-cell"><input type="range" class="slider ${dc}" min="-500" max="500" step="25" value="${m.delta_bps}" oninput="onSlider(${i},this.value)"><span class="delta-val ${dtc}">${dStr}</span></div></td>
+      <td><div class="slider-cell"><button class="step-btn dn" onclick="stepDelta(${i},-25)">−</button><input type="number" class="delta-input ${dc}" id="di${i}" value="${m.delta_bps}" step="25" onchange="setDelta(${i},this.value)" onkeydown="deltaKey(event,${i})"><button class="step-btn up" onclick="stepDelta(${i},25)">+</button></div></td>
       <td class="rate-val">${cum.toFixed(2)}%</td>
     </tr>`;
   }).join('');
   drawForwardChart(path);
 }
 
-function onSlider(i,v){meetings[i].delta_bps=parseInt(v,10);renderMPC();fetchModelRatesDebounced()}
+function stepDelta(i,step){
+  meetings[i].delta_bps=Math.max(-2000,Math.min(2000,meetings[i].delta_bps+step));
+  renderMPC();fetchModelRatesDebounced();
+}
+function setDelta(i,v){
+  const n=parseInt(v,10);
+  meetings[i].delta_bps=isNaN(n)?0:Math.round(n/25)*25;
+  renderMPC();fetchModelRatesDebounced();
+}
+function deltaKey(e,i){
+  if(e.key==='ArrowUp'){e.preventDefault();stepDelta(i,25)}
+  else if(e.key==='ArrowDown'){e.preventDefault();stepDelta(i,-25)}
+}
 function resetToImplied(){meetings.forEach((m,i)=>{m.delta_bps=impliedDeltas[i]||0});renderMPC();fetchModelRates()}
 function clearAllCuts(){meetings.forEach(m=>{m.delta_bps=0});renderMPC();fetchModelRates()}
 
