@@ -1,7 +1,7 @@
 import { useState, useMemo, useCallback } from "react";
 
 const C={bg:"#060A14",sf:"#0D1117",sa:"#161B22",bd:"#21262D",tx:"#E6EDF3",tm:"#8B949E",
-  ois:"#3FB950",irs:"#BC8CFF",xccy:"#F0883E",bl:"#58A6FF",am:"#D29922",rd:"#F85149",cy:"#39D2C0"};
+  ois:"#3FB950",off:"#F0883E",bl:"#58A6FF",am:"#D29922",rd:"#F85149",cy:"#39D2C0"};
 
 const BONDS=[
 {isin:"TRB170626T13",mat:"2026-06-17",cpn:0,freq:0,last:93.545,type:"zcb"},
@@ -28,26 +28,28 @@ const BONDS=[
 {isin:"TRT100730T13",mat:"2030-07-10",cpn:34.1,freq:2,last:100.0,type:"fix"},
 ];
 
+// OIS quotes — updated from FX_market_2.xlsm TRY_ois sheet
 const Q_OIS=[
-{t:"1W",mo:0,dy:7,bid:39.60,ask:40.60},{t:"2W",mo:0,dy:14,bid:39.60,ask:40.60},
-{t:"1M",mo:1,dy:0,bid:39.00,ask:41.00},{t:"2M",mo:2,dy:0,bid:40.00,ask:42.70},
-{t:"3M",mo:3,dy:0,bid:40.30,ask:43.00},{t:"6M",mo:6,dy:0,bid:38.60,ask:42.40},
-{t:"9M",mo:9,dy:0,bid:37.40,ask:41.60},{t:"1Y",mo:12,dy:0,bid:36.50,ask:40.70},
-{t:"18M",mo:18,dy:0,bid:35.00,ask:39.50},{t:"2Y",mo:24,dy:0,bid:33.80,ask:38.56},
-{t:"3Y",mo:36,dy:0,bid:32.50,ask:36.62},{t:"4Y",mo:48,dy:0,bid:31.20,ask:35.34},
-{t:"5Y",mo:60,dy:0,bid:30.10,ask:34.32},
+{t:"1W",mo:0,dy:7,bid:39.60,ask:40.60},{t:"2W",mo:0,dy:14,bid:39.75,ask:40.75},
+{t:"1M",mo:1,dy:0,bid:40.30,ask:40.50},{t:"2M",mo:2,dy:0,bid:40.69,ask:40.89},
+{t:"3M",mo:3,dy:0,bid:41.15,ask:41.35},{t:"6M",mo:6,dy:0,bid:39.98,ask:40.18},
+{t:"9M",mo:9,dy:0,bid:38.98,ask:39.18},{t:"1Y",mo:12,dy:0,bid:38.05,ask:38.25},
+{t:"18M",mo:18,dy:0,bid:36.75,ask:36.95},{t:"2Y",mo:24,dy:0,bid:35.68,ask:35.88},
+{t:"3Y",mo:36,dy:0,bid:34.08,ask:34.30},{t:"4Y",mo:48,dy:0,bid:32.84,ask:33.05},
+{t:"5Y",mo:60,dy:0,bid:31.79,ask:32.02},
 ];
-const Q_IRS=[
-{t:"3M",mo:3,dy:0,mid:42.50,tk:"TRYSAQ3M"},{t:"6M",mo:6,dy:0,mid:41.50,tk:"TRYSAQ6M"},
-{t:"9M",mo:9,dy:0,mid:41.00,tk:"TRYSAQ9M"},{t:"1Y",mo:12,dy:0,mid:41.12,tk:"TRYSAQ1"},
-{t:"18M",mo:18,dy:0,mid:40.00,tk:"TRYSAQ1F"},{t:"2Y",mo:24,dy:0,mid:39.50,tk:"TRYSAQ2"},
-{t:"3Y",mo:36,dy:0,mid:38.00,tk:"TRYSAQ3"},{t:"5Y",mo:60,dy:0,mid:36.00,tk:"TRYSAQ5"},
+
+// Offshore TRY — TRYI series from FX_market_2.xlsm (deposit rates + DFs)
+const Q_OFF=[
+{t:"ON",d:0,rate:31.75,df:1,tk:"TRYION"},{t:"TN",d:1,rate:28.00,df:0.99922,tk:"TRYITN"},
+{t:"1W",d:7,rate:30.35,df:0.99491,tk:"TRYI1W"},{t:"2W",d:14,rate:33.15,df:0.98804,tk:"TRYI2W"},
+{t:"1M",d:30,rate:34.53,df:0.97278,tk:"TRYI1M"},{t:"2M",d:63,rate:36.35,df:0.94092,tk:"TRYI2M"},
+{t:"3M",d:91,rate:37.40,df:0.91434,tk:"TRYI3M"},{t:"6M",d:183,rate:38.75,df:0.83610,tk:"TRYI6M"},
+{t:"9M",d:275,rate:39.69,df:0.76793,tk:"TRYI9M"},{t:"1Y",d:365,rate:41.02,df:0.70628,tk:"TRYI12M"},
+{t:"18M",d:548,rate:38.05,df:0.60944,tk:"TRYI18M"},{t:"2Y",d:731,rate:39.04,df:0.51556,tk:"TRYI2Y"},
+{t:"3Y",d:1096,rate:36.94,df:0.39392,tk:"TRYI3Y"},
 ];
-// XCCY: TYUSSW series — TRY 3M quarterly vs USD annual (SOFR)
-const Q_XCCY=[
-{t:"1Y",mo:12,dy:0,mid:42.00,tk:"TYUSSW1"},{t:"2Y",mo:24,dy:0,mid:40.50,tk:"TYUSSW2"},
-{t:"3Y",mo:36,dy:0,mid:39.00,tk:"TYUSSW3"},{t:"5Y",mo:60,dy:0,mid:37.50,tk:"TYUSSW5"},
-];
+
 const PPK_DATES=["2026-04-24","2026-06-12","2026-07-24","2026-09-11","2026-10-23","2026-12-11","2027-01-22","2027-03-18","2027-04-26","2027-06-11","2027-07-23","2027-09-03","2027-10-15","2027-11-26","2028-01-07","2028-02-18","2028-03-31","2028-05-12","2028-06-23","2028-08-04","2028-09-15","2028-10-27","2028-12-08","2029-01-19","2029-03-02","2029-04-13"];
 
 // ─── Core ────────────────────────────────────────────────────────────
@@ -70,114 +72,114 @@ function idf(nodes,td){
 }
 function zr(nodes,d){return d>0?(1/idf(nodes,d)-1)*365/d*100:0;}
 
-function bootstrap(quotes,vd){
-  const tn=quotes.map(q=>{const m=matD(vd,q.mo,q.dy),d=db(vd,m);return{...q,mat:m,d};});
-  const nodes=[{d:0,f:1,t:"T0",r:0}];
-  for(const n of tn.filter(x=>x.d<=95))nodes.push({d:n.d,f:1/(1+n.r*n.d/365),t:n.t,r:n.r});
+// Bootstrap OIS (quarterly par swap rates)
+function bsOIS(quotes,vd){
+  const tn=quotes.map(q=>{const m=matD(vd,q.mo,q.dy),d=db(vd,m);return {...q,mat:m,d};});
+  const nodes=[{d:0,f:1,t:"T0"}];
+  for(const n of tn.filter(x=>x.d<=95))nodes.push({d:n.d,f:1/(1+n.r*n.d/365),t:n.t});
   const le=tn.filter(x=>x.d>95).sort((a,b)=>a.d-b.d);
   if(le.length){
     const maxM=Math.max(...le.map(x=>x.mo));
     const mp=tn.map(x=>[x.d,x.r]).sort((a,b)=>a[0]-b[0]);
     function ip(td){for(const[d,r]of mp)if(d===td)return r;for(let i=0;i<mp.length-1;i++){const[d0,r0]=mp[i],[d1,r1]=mp[i+1];if(d0<=td&&td<=d1)return r0+(r1-r0)*(td-d0)/(d1-d0);}return td>mp[mp.length-1][0]?mp[mp.length-1][1]:mp[0][1];}
     const grid=[];
-    for(let qm=3;qm<=maxM;qm+=3){const m=matD(vd,qm,0),qd=db(vd,m),pr=ip(qd),pv=grid.length?grid[grid.length-1].d:0,tau=qd-pv,stdf=grid.reduce((s,g)=>s+g.tau*g.f,0),dfn=(1-pr*stdf/365)/(1+pr*tau/365);let tl=`${qm}M`;for(const t of le)if(t.d===qd){tl=t.t;break;}grid.push({d:qd,tau,f:dfn,t:tl,r:pr});nodes.push({d:qd,f:dfn,t:tl,r:pr});}
+    for(let qm=3;qm<=maxM;qm+=3){const m=matD(vd,qm,0),qd=db(vd,m),pr=ip(qd),pv=grid.length?grid[grid.length-1].d:0,tau=qd-pv,stdf=grid.reduce((s,g)=>s+g.tau*g.f,0),dfn=(1-pr*stdf/365)/(1+pr*tau/365);let tl=`${qm}M`;for(const t of le)if(t.d===qd){tl=t.t;break;}grid.push({d:qd,tau,f:dfn,t:tl});nodes.push({d:qd,f:dfn,t:tl});}
   }
   nodes.sort((a,b)=>a.d-b.d);const u=[];for(const n of nodes){if(!u.length||u[u.length-1].d!==n.d)u.push(n);else u[u.length-1]=n;}return u;
 }
 
+// Offshore: direct DF nodes from TRYI data
+function mkOff(data){return data.filter(q=>q.d>=0).map(q=>({d:q.d,f:q.df,t:q.t}));}
+
 function prepOIS(q,qt){return q.map(x=>({...x,r:qt==="bid"?x.bid/100:qt==="ask"?x.ask/100:(x.bid+x.ask)/200}));}
-function prepMid(q){return q.map(x=>({...x,r:x.mid/100}));}
 
 function genCFs(bond,vd,oisN){
   const td=db(vd,pd(bond.mat));if(td<=0)return[];
-  if(bond.freq===0||bond.cpn===0)return[{days:td,cf:100}];
+  if(bond.freq===0||bond.cpn===0)return [{days:td,cf:100}];
   const pm=bond.freq===4?3:6;const dates=[];let d=new Date(pd(bond.mat));
   while(db(vd,d)>0){dates.unshift(db(vd,d));d=addM(d,-pm);}
-  if(!dates.length)return[{days:td,cf:100}];
-  if(bond.type==="flt"){return dates.map((dc,i)=>{const dp=i>0?dates[i-1]:0;const fw=(idf(oisN,dp)/idf(oisN,dc)-1)*100;return{days:dc,cf:i===dates.length-1?fw+100:fw};});}
+  if(!dates.length)return [{days:td,cf:100}];
+  if(bond.type==="flt"){return dates.map((dc,i)=>{const dp=i>0?dates[i-1]:0;const fw=(idf(oisN,dp)/idf(oisN,dc)-1)*100;return {days:dc,cf:i===dates.length-1?fw+100:fw};});}
   const cpp=bond.cpn/bond.freq;return dates.map((dc,i)=>({days:dc,cf:i===dates.length-1?cpp+100:cpp}));
 }
 
 function solveZ(cfs,nodes,target,prd){
   function pv(s){let v=0;for(const{days,cf}of cfs){if(days<=0)continue;const df=idf(nodes,days);if(df<=0)continue;const r=(Math.pow(1/df,prd/days)-1)*365/prd;v+=cf/Math.pow(1+(r+s)/365*prd,days/prd);}return v;}
-  let lo=-0.5,hi=0.5;for(let i=0;i<120;i++){const mid=(lo+hi)/2;if(Math.abs(pv(mid)-target)<0.0001)return mid;if(pv(mid)>target)lo=mid;else hi=mid;}return(lo+hi)/2;
+  let lo=-0.5,hi=0.5;for(let i=0;i<120;i++){const mid=(lo+hi)/2;if(Math.abs(pv(mid)-target)<1e-4)return mid;if(pv(mid)>target)lo=mid;else hi=mid;}return (lo+hi)/2;
 }
 
-function priceBonds(bonds,oisN,xccyN,vd){
+function priceBonds(bonds,oisN,offN,vd){
   return bonds.map(bond=>{
     const td=db(vd,pd(bond.mat));if(td<=0)return null;
     const prd=bond.freq===4?91:182;const cfs=genCFs(bond,vd,oisN);if(!cfs.length)return null;
     let pvO=0;for(const{days,cf}of cfs)if(days>0)pvO+=cf*idf(oisN,days);
     const zsO=solveZ(cfs,oisN,bond.last,prd)*100;
-    const zsX=solveZ(cfs,xccyN,bond.last,prd)*100;
-    return{...bond,td,zsO,zsX,pvO,yO:zr(oisN,td)+zsO,yX:zr(xccyN,td)+zsX};
+    const zsX=solveZ(cfs,offN,bond.last,prd)*100;
+    return {...bond,td,zsO,zsX,pvO,yO:zr(oisN,td)+zsO};
   }).filter(Boolean).sort((a,b)=>a.td-b.td);
 }
 
-// ─── SVG Chart ───────────────────────────────────────────────────────
-function Chart({lines=[],dots=[],title,yLabel,w=640,h=210,zeroLine=false}){
-  const P={l:52,r:16,t:28,b:32},cw=w-P.l-P.r,ch=h-P.t-P.b;
+// ─── Chart ───────────────────────────────────────────────────────────
+function Chart({lines=[],dots=[],title,yLabel,w=640,h=210,zLine=false}){
+  const P={l:52,r:16,t:28,b:32};
   const all=[...dots,...lines.flatMap(l=>l.pts)];if(!all.length)return null;
   const allY=all.map(p=>p.y).filter(isFinite),allX=all.map(p=>p.x);
   const xMax=Math.max(...allX,400);let yMin=Math.min(...allY),yMax=Math.max(...allY);
   const yP=(yMax-yMin)*.15||2;yMin-=yP;yMax+=yP;
-  const sx=x=>x/xMax*cw+P.l,sy=y=>h-P.b-(y-yMin)/(yMax-yMin)*ch;
+  const sx=x=>x/xMax*(w-P.l-P.r)+P.l,sy=y=>h-P.b-(y-yMin)/(yMax-yMin)*(h-P.t-P.b);
   const yT=[];const ySt=Math.max(Math.ceil((yMax-yMin)/5),1);for(let v=Math.ceil(yMin);v<=yMax;v+=ySt)yT.push(v);
   const xT=[];const xSt=Math.max(Math.round(xMax/5/90)*90,90);for(let v=xSt;v<=xMax;v+=xSt)xT.push(v);
   return (
     <div style={{background:C.sf,border:`1px solid ${C.bd}`,borderRadius:"6px",padding:"4px",marginBottom:"12px"}}>
       <svg width="100%" viewBox={`0 0 ${w} ${h}`} style={{display:"block"}}>
         <text x={w/2} y={16} textAnchor="middle" fill={C.tm} fontSize="10" fontFamily="'DM Sans',sans-serif" fontWeight="600">{title}</text>
-        {yT.map(v=> <g key={v}><line x1={P.l} x2={w-P.r} y1={sy(v)} y2={sy(v)} stroke={C.bd} strokeWidth=".5"/><text x={P.l-6} y={sy(v)+3} textAnchor="end" fill={C.tm} fontSize="9" fontFamily="'JetBrains Mono',monospace">{v.toFixed(v%1?1:0)}%</text></g>)}
-        {xT.map(v=> <g key={v}><line x1={sx(v)} x2={sx(v)} y1={P.t} y2={h-P.b} stroke={C.bd} strokeWidth=".5"/><text x={sx(v)} y={h-P.b+14} textAnchor="middle" fill={C.tm} fontSize="9" fontFamily="'JetBrains Mono',monospace">{v}d</text></g>)}
+        {yT.map(v=> <g key={v}><line x1={P.l} x2={w-P.r} y1={sy(v)} y2={sy(v)} stroke={C.bd} strokeWidth=".5"/><text x={P.l-6} y={sy(v)+3} textAnchor="end" fill={C.tm} fontSize="9" fontFamily="monospace">{v.toFixed(v%1?1:0)}%</text></g>)}
+        {xT.map(v=> <g key={v}><line x1={sx(v)} x2={sx(v)} y1={P.t} y2={h-P.b} stroke={C.bd} strokeWidth=".5"/><text x={sx(v)} y={h-P.b+14} textAnchor="middle" fill={C.tm} fontSize="9" fontFamily="monospace">{v}d</text></g>)}
         <line x1={P.l} x2={P.l} y1={P.t} y2={h-P.b} stroke={C.bd}/><line x1={P.l} x2={w-P.r} y1={h-P.b} y2={h-P.b} stroke={C.bd}/>
-        {zeroLine&&<line x1={P.l} x2={w-P.r} y1={sy(0)} y2={sy(0)} stroke={C.tm} strokeWidth=".5" strokeDasharray="3,3"/>}
-        {lines.map((l,i)=>{const s=[...l.pts].sort((a,b)=>a.x-b.x);return <path key={i} d={s.map((p,j)=>`${j?"L":"M"}${sx(p.x).toFixed(1)},${sy(p.y).toFixed(1)}`).join(" ")} fill="none" stroke={l.color} strokeWidth={l.w||1.5} strokeDasharray={l.dash||"none"} opacity={l.op||.8}/>;})}
-        {dots.map((d,i)=>isFinite(sy(d.y))?<circle key={i} cx={sx(d.x)} cy={sy(d.y)} r="4" fill={d.color||C.bl} opacity=".85" stroke={C.bg} strokeWidth="1"/>:null)}
+        {zLine&&<line x1={P.l} x2={w-P.r} y1={sy(0)} y2={sy(0)} stroke={C.tm} strokeWidth=".5" strokeDasharray="3,3"/>}
+        {lines.map((l,i)=> <path key={i} d={[...l.pts].sort((a,b)=>a.x-b.x).map((p,j)=>`${j?"L":"M"}${sx(p.x).toFixed(1)},${sy(p.y).toFixed(1)}`).join(" ")} fill="none" stroke={l.color} strokeWidth={l.w||2} strokeDasharray={l.dash||"none"} opacity={l.op||.85}/>)}
+        {dots.map((d,i)=>isFinite(sy(d.y))? <circle key={i} cx={sx(d.x)} cy={sy(d.y)} r="4" fill={d.color||C.bl} opacity=".85" stroke={C.bg} strokeWidth="1"/>:null)}
         <text x={12} y={h/2} textAnchor="middle" fill={C.tm} fontSize="9" transform={`rotate(-90,12,${h/2})`}>{yLabel}</text>
-        {lines.length>0&&<g transform={`translate(${P.l+8},${P.t+4})`}>{lines.map((l,i)=> <g key={i} transform={`translate(${i*72},0)`}><line x1="0" x2="14" y1="4" y2="4" stroke={l.color} strokeWidth="2" strokeDasharray={l.dash||"none"}/><text x="18" y="7" fill={C.tm} fontSize="8">{l.label}</text></g>)}</g>}
+        {lines.length>0&&<g transform={`translate(${P.l+8},${P.t+4})`}>{lines.map((l,i)=> <g key={i} transform={`translate(${i*80},0)`}><line x1="0" x2="14" y1="4" y2="4" stroke={l.color} strokeWidth="2" strokeDasharray={l.dash||"none"}/><text x="18" y="7" fill={C.tm} fontSize="8">{l.label}</text></g>)}</g>}
       </svg>
     </div>
   );
 }
 
-// ─── Styles ──────────────────────────────────────────────────────────
-const cs={padding:"5px 8px",borderBottom:`1px solid ${C.bd}`,fontSize:"11.5px",fontFamily:"'JetBrains Mono','Fira Code',monospace",whiteSpace:"nowrap"};
+// ─── UI ──────────────────────────────────────────────────────────────
+const cs={padding:"5px 8px",borderBottom:`1px solid ${C.bd}`,fontSize:"11.5px",fontFamily:"'JetBrains Mono',monospace",whiteSpace:"nowrap"};
 const hs={...cs,color:C.tm,fontWeight:600,fontSize:"9.5px",textTransform:"uppercase",letterSpacing:".5px",position:"sticky",top:0,background:C.sf,zIndex:2};
 function CV({v,f=1,s="%"}){const c=v>.005?C.rd:v<-.005?C.ois:C.tm;return <span style={{color:c,fontSize:"11.5px"}}>{v>.005?"+":""}{v.toFixed(f)}{s}</span>;}
-function RI({v,onChange,w="56px",color}){return <input type="number" step="0.25" value={v} onChange={e=>onChange(+e.target.value||0)} style={{width:w,background:C.bg,border:`1px solid ${C.bd}`,borderRadius:"3px",color:color||C.bl,padding:"3px 4px",fontSize:"11.5px",fontFamily:"'JetBrains Mono',monospace",textAlign:"right",outline:"none"}}/>;}
+function RI({v,onChange,w="56px",color}){return <input type="number" step="0.25" value={v} onChange={e=>onChange(+e.target.value||0)} style={{width:w,background:C.bg,border:`1px solid ${C.bd}`,borderRadius:"3px",color:color||C.bl,padding:"3px 4px",fontSize:"11.5px",fontFamily:"monospace",textAlign:"right",outline:"none"}}/>;}
 
 // ─── App ─────────────────────────────────────────────────────────────
 export default function App(){
   const[td,setTd]=useState("2026-04-13");
   const[qt,setQt]=useState("mid");
   const[oisQ,setOQ]=useState(Q_OIS);
-  const[irsQ,setIQ]=useState(Q_IRS);
-  const[xccyQ,setXQ]=useState(Q_XCCY);
+  const[offQ,setXQ]=useState(Q_OFF);
   const[tab,setTab]=useState("bonds");
   const uO=useCallback((i,f,v)=>setOQ(p=>{const n=[...p];n[i]={...n[i],[f]:v};return n;}),[]);
-  const uI=useCallback((i,v)=>setIQ(p=>{const n=[...p];n[i]={...n[i],mid:v};return n;}),[]);
-  const uX=useCallback((i,v)=>setXQ(p=>{const n=[...p];n[i]={...n[i],mid:v};return n;}),[]);
+  const uX=useCallback((i,v)=>setXQ(p=>{const n=[...p];n[i]={...n[i],rate:v,df:1/(1+v/100*n[i].d/365)};return n;}),[]);
 
   const vd=useMemo(()=>addBD(pd(td),1),[td]);
-  const oisN=useMemo(()=>bootstrap(prepOIS(oisQ,qt),vd),[oisQ,qt,vd]);
-  const irsN=useMemo(()=>bootstrap(prepMid(irsQ),vd),[irsQ,vd]);
-  const xccyN=useMemo(()=>bootstrap(prepMid(xccyQ),vd),[xccyQ,vd]);
-  const bondR=useMemo(()=>priceBonds(BONDS,oisN,xccyN,vd),[oisN,xccyN,vd]);
+  const oisN=useMemo(()=>bsOIS(prepOIS(oisQ,qt),vd),[oisQ,qt,vd]);
+  const offN=useMemo(()=>mkOff(offQ),[offQ]);
+  const bondR=useMemo(()=>priceBonds(BONDS,oisN,offN,vd),[oisN,offN,vd]);
   const ppk=useMemo(()=>{const dates=PPK_DATES.map(pd).filter(d=>d>vd),res=[];let pD=vd,pDF=1;for(const md of dates){const days=db(vd,md),df=idf(oisN,days),p=db(pD,md);if(p>0&&pDF>0&&df>0)res.push({date:fd(md),days,pd:p,df,ir:(pDF/df-1)*365/p*100});pD=md;pDF=df;}return res;},[oisN,vd]);
 
   return (
     <div style={{minHeight:"100vh",background:C.bg,color:C.tx,fontFamily:"'DM Sans','Segoe UI',system-ui,sans-serif"}}>
-      <div style={{background:C.sf,borderBottom:`1px solid ${C.bd}`,padding:"12px 20px",display:"flex",alignItems:"center",justifyContent:"space-between",flexWrap:"wrap",gap:"10px"}}>
+      <div style={{background:C.sf,borderBottom:`1px solid ${C.bd}`,padding:"12px 16px",display:"flex",alignItems:"center",justifyContent:"space-between",flexWrap:"wrap",gap:"10px"}}>
         <div style={{display:"flex",alignItems:"center",gap:"8px"}}>
           <div style={{width:"4px",height:"28px",background:C.bl,borderRadius:"2px"}}/>
-          <div><div style={{fontSize:"15px",fontWeight:700}}>TLREF Triple Curve Pricer</div>
-          <div style={{fontSize:"10px",color:C.tm,fontFamily:"'JetBrains Mono',monospace"}}>
-            <span style={{color:C.ois}}>OIS</span> · <span style={{color:C.irs}}>IRS</span> · <span style={{color:C.xccy}}>XCCY</span> · Bond Z-Spread
+          <div><div style={{fontSize:"15px",fontWeight:700}}>TLREF Pricer</div>
+          <div style={{fontSize:"10px",color:C.tm,fontFamily:"monospace"}}>
+            <span style={{color:C.ois}}>Onshore OIS</span>{" · "}<span style={{color:C.off}}>Offshore TRYI</span>{" · Bond Z-Spread"}
           </div></div>
         </div>
         <div style={{display:"flex",alignItems:"center",gap:"12px",flexWrap:"wrap"}}>
-          <label style={{display:"flex",alignItems:"center",gap:"4px",fontSize:"11px",color:C.tm}}>Trade<input type="date" value={td} onChange={e=>setTd(e.target.value)} style={{background:C.bg,border:`1px solid ${C.bd}`,borderRadius:"3px",color:C.tx,padding:"3px 6px",fontSize:"11px",fontFamily:"'JetBrains Mono',monospace"}}/></label>
+          <label style={{display:"flex",alignItems:"center",gap:"4px",fontSize:"11px",color:C.tm}}>Trade<input type="date" value={td} onChange={e=>setTd(e.target.value)} style={{background:C.bg,border:`1px solid ${C.bd}`,borderRadius:"3px",color:C.tx,padding:"3px 6px",fontSize:"11px",fontFamily:"monospace"}}/></label>
           <span style={{fontSize:"11px",color:C.tm}}>VD: <span style={{color:C.cy}}>{fd(vd)}</span></span>
           <div style={{display:"flex",gap:"2px",background:C.bg,borderRadius:"4px",padding:"2px"}}>
             {["bid","mid","ask"].map(t=> <button key={t} onClick={()=>setQt(t)} style={{padding:"3px 10px",fontSize:"10px",fontWeight:600,textTransform:"uppercase",border:"none",borderRadius:"3px",cursor:"pointer",background:qt===t?C.bl:"transparent",color:qt===t?C.bg:C.tm}}>{t}</button>)}
@@ -189,35 +191,35 @@ export default function App(){
           <button key={id} onClick={()=>setTab(id)} style={{padding:"9px 14px",fontSize:"11.5px",fontWeight:600,border:"none",borderBottom:tab===id?`2px solid ${C.bl}`:"2px solid transparent",background:"transparent",color:tab===id?C.tx:C.tm,cursor:"pointer",whiteSpace:"nowrap"}}>{lb}</button>)}
       </div>
       <div style={{padding:"14px 16px"}}>
-        {tab==="bonds"&&<BondTab bonds={bondR} oisN={oisN} xccyN={xccyN}/>}
-        {tab==="curves"&&<CurveTab oisN={oisN} irsN={irsN} xccyN={xccyN}/>}
+        {tab==="bonds"&&<BondTab bonds={bondR} oisN={oisN} offN={offN}/>}
+        {tab==="curves"&&<CurveTab oisN={oisN} offN={offN}/>}
         {tab==="ppk"&&<PPKTab ppk={ppk}/>}
-        {tab==="data"&&<DataTab oisQ={oisQ} irsQ={irsQ} xccyQ={xccyQ} uO={uO} uI={uI} uX={uX} qt={qt} oisN={oisN} irsN={irsN} xccyN={xccyN}/>}
+        {tab==="data"&&<DataTab oisQ={oisQ} offQ={offQ} uO={uO} uX={uX} qt={qt} oisN={oisN}/>}
       </div>
-      <div style={{padding:"6px 16px",borderTop:`1px solid ${C.bd}`,fontSize:"9px",color:C.tm,fontFamily:"'JetBrains Mono',monospace",textAlign:"right",letterSpacing:"1px"}}>FETM RESEARCH — TRIPLE CURVE ENGINE v3.1</div>
+      <div style={{padding:"6px 16px",borderTop:`1px solid ${C.bd}`,fontSize:"9px",color:C.tm,fontFamily:"monospace",textAlign:"right",letterSpacing:"1px"}}>FETM RESEARCH — OIS + OFFSHORE ENGINE v4.0</div>
     </div>
   );
 }
 
 // ─── BONDS ───────────────────────────────────────────────────────────
-function BondTab({bonds,oisN,xccyN}){
+function BondTab({bonds,oisN,offN}){
   const vb=bonds.filter(b=>Math.abs(b.zsO)<20);
-  const oisC=oisN.filter(n=>n.d>0&&n.d<=1800).map(n=>({x:n.d,y:zr(oisN,n.d)}));
-  const xccyC=xccyN.filter(n=>n.d>0&&n.d<=1800).map(n=>({x:n.d,y:zr(xccyN,n.d)}));
-  const tc=t=>t==="zcb"?C.am:t==="flt"?C.cy:C.bl;
   const mx=Math.max(...vb.map(b=>Math.abs(b.zsO)),1);
+  const oisC=oisN.filter(n=>n.d>0&&n.d<=1600).map(n=>({x:n.d,y:zr(oisN,n.d)}));
+  const offC=offN.filter(n=>n.d>0&&n.d<=1600).map(n=>({x:n.d,y:zr(offN,n.d)}));
+  const tc=t=>t==="zcb"?C.am:t==="flt"?C.cy:C.bl;
 
   return <div>
     <div style={{display:"flex",gap:"10px",flexWrap:"wrap",marginBottom:"14px"}}>
       <div style={{flex:"1 1 300px",minWidth:"270px"}}>
-        <Chart title="Bond Yield vs OIS & XCCY Curves" yLabel="%" lines={[{pts:oisC,color:C.ois,label:"OIS",w:2,dash:"4,3"},{pts:xccyC,color:C.xccy,label:"XCCY",w:2,dash:"4,3"}]} dots={vb.map(b=>({x:b.td,y:b.yO,color:tc(b.type)}))}/>
+        <Chart title="Bond Yield vs Onshore & Offshore Curves" yLabel="%" lines={[{pts:oisC,color:C.ois,label:"OIS",dash:"4,3"},{pts:offC,color:C.off,label:"Offshore",dash:"4,3"}]} dots={vb.map(b=>({x:b.td,y:b.yO,color:tc(b.type)}))}/>
       </div>
       <div style={{flex:"1 1 300px",minWidth:"270px"}}>
-        <Chart title="Z-Spread: vs OIS (dots) · vs XCCY (rings)" yLabel="Spread %" lines={[]} dots={vb.map(b=>({x:b.td,y:b.zsO,color:tc(b.type)}))} zeroLine/>
+        <Chart title="Z-Spread vs OIS" yLabel="Spread %" lines={[]} dots={vb.map(b=>({x:b.td,y:b.zsO,color:tc(b.type)}))} zLine/>
       </div>
     </div>
     <div style={{overflowX:"auto"}}><table style={{borderCollapse:"collapse",width:"100%"}}><thead><tr>
-      {["ISIN","Mat","Days","Cpn","Last","Z/OIS","Z/XCCY","OIS−XCCY",""].map(h=>
+      {["ISIN","Mat","Days","Cpn","Last","Z / OIS","Z / Offshore","Δ",""].map(h=>
         <th key={h} style={{...hs,textAlign:["ISIN","Mat"].includes(h)?"left":"right"}}>{h}</th>)}
     </tr></thead><tbody>
       {[{k:"flt",l:"TLREF-Linked (Floating)",c:C.cy},{k:"fix",l:"Fixed Coupon",c:C.bl},{k:"zcb",l:"Zero Coupon",c:C.am}].map(g=>{
@@ -245,113 +247,77 @@ function BondTab({bonds,oisN,xccyN}){
 }
 
 // ─── CURVES ──────────────────────────────────────────────────────────
-function CurveTab({oisN,irsN,xccyN}){
-  const maxD=1800;
-  const oisP=oisN.filter(n=>n.d>0&&n.d<=maxD).map(n=>({x:n.d,y:zr(oisN,n.d)}));
-  const irsP=irsN.filter(n=>n.d>0&&n.d<=maxD).map(n=>({x:n.d,y:zr(irsN,n.d)}));
-  const xccyP=xccyN.filter(n=>n.d>0&&n.d<=maxD).map(n=>({x:n.d,y:zr(xccyN,n.d)}));
-
-  // Basis at OIS quarterly nodes
-  const basis=oisN.filter(n=>n.d>=91&&n.d<=maxD).map(n=>{
-    const d=n.d,o=zr(oisN,d),ir=zr(irsN,d),xc=zr(xccyN,d);
-    return {d,t:n.t,o,ir,xc,irsB:(ir-o)*100,xccyB:(xc-o)*100};
-  });
+function CurveTab({oisN,offN}){
+  const oisP=oisN.filter(n=>n.d>0&&n.d<=1600).map(n=>({x:n.d,y:zr(oisN,n.d)}));
+  const offP=offN.filter(n=>n.d>0&&n.d<=1600).map(n=>({x:n.d,y:zr(offN,n.d)}));
+  const basis=oisN.filter(n=>n.d>=7&&n.d<=1600).map(n=>({d:n.d,t:n.t,o:zr(oisN,n.d),x:zr(offN,n.d),b:(zr(offN,n.d)-zr(oisN,n.d))*100}));
 
   return <div>
     <div style={{display:"flex",gap:"10px",flexWrap:"wrap",marginBottom:"14px"}}>
       <div style={{flex:"1 1 300px",minWidth:"270px"}}>
-        <Chart title="Zero Curves: OIS · IRS · XCCY" yLabel="Zero Rate %" lines={[
-          {pts:oisP,color:C.ois,label:"OIS",w:2},{pts:irsP,color:C.irs,label:"IRS",w:2},{pts:xccyP,color:C.xccy,label:"XCCY",w:2}
-        ]} dots={[]}/>
+        <Chart title="Zero Curves: Onshore OIS vs Offshore TRYI" yLabel="%" lines={[{pts:oisP,color:C.ois,label:"OIS (TYSO)"},{pts:offP,color:C.off,label:"Offshore (TRYI)"}]} dots={[]}/>
       </div>
       <div style={{flex:"1 1 300px",minWidth:"270px"}}>
-        <Chart title="Basis over OIS (bp)" yLabel="bp" lines={[
-          {pts:basis.map(b=>({x:b.d,y:b.irsB})),color:C.irs,label:"IRS−OIS",w:2},
-          {pts:basis.map(b=>({x:b.d,y:b.xccyB})),color:C.xccy,label:"XCCY−OIS",w:2}
-        ]} dots={[]} zeroLine/>
+        <Chart title="Offshore − OIS Basis (bp)" yLabel="bp" lines={[{pts:basis.map(b=>({x:b.d,y:b.b})),color:C.off,label:"Basis"}]} dots={basis.map(b=>({x:b.d,y:b.b,color:C.off}))} zLine/>
       </div>
     </div>
-    <div style={{fontSize:"12px",color:C.tm,marginBottom:"6px"}}>Basis Term Structure</div>
-    <div style={{overflowX:"auto"}}><table style={{borderCollapse:"collapse",width:"100%",maxWidth:"700px"}}><thead><tr>
-      {["Tenor","Days","OIS Zero","IRS Zero","XCCY Zero","IRS−OIS","XCCY−OIS"].map(h=>
-        <th key={h} style={{...hs,textAlign:h==="Tenor"?"left":"right"}}>{h}</th>)}
+    <div style={{overflowX:"auto"}}><table style={{borderCollapse:"collapse",width:"100%",maxWidth:"650px"}}><thead><tr>
+      {["Tenor","Days","OIS Zero","Offshore Zero","Basis"].map(h=> <th key={h} style={{...hs,textAlign:h==="Tenor"?"left":"right"}}>{h}</th>)}
     </tr></thead><tbody>
       {basis.map((b,i)=> <tr key={i} style={{background:i%2?`${C.sa}44`:"transparent"}}>
         <td style={{...cs,fontWeight:600}}>{b.t}</td>
         <td style={{...cs,textAlign:"right",color:C.tm}}>{b.d}</td>
         <td style={{...cs,textAlign:"right",color:C.ois}}>{b.o.toFixed(2)}%</td>
-        <td style={{...cs,textAlign:"right",color:C.irs}}>{b.ir.toFixed(2)}%</td>
-        <td style={{...cs,textAlign:"right",color:C.xccy}}>{b.xc.toFixed(2)}%</td>
-        <td style={{...cs,textAlign:"right"}}><span style={{color:C.irs,fontWeight:600}}>{b.irsB>0?"+":""}{b.irsB.toFixed(0)} bp</span></td>
-        <td style={{...cs,textAlign:"right"}}><span style={{color:C.xccy,fontWeight:600}}>{b.xccyB>0?"+":""}{b.xccyB.toFixed(0)} bp</span></td>
+        <td style={{...cs,textAlign:"right",color:C.off}}>{b.x.toFixed(2)}%</td>
+        <td style={{...cs,textAlign:"right"}}><span style={{color:C.off,fontWeight:600}}>{b.b>0?"+":""}{b.b.toFixed(0)} bp</span></td>
       </tr>)}
     </tbody></table></div>
   </div>;
 }
 
 // ─── PPK ─────────────────────────────────────────────────────────────
-function PPKTab({ppk}){
-  return <div>
-    <div style={{marginBottom:"10px",fontSize:"12px",color:C.tm}}>Market-implied PPK path from OIS forwards.</div>
-    <div style={{overflowX:"auto"}}><table style={{borderCollapse:"collapse",width:"100%"}}><thead><tr>
-      {["PPK Date","Period","Implied","Chg","DF"].map(h=> <th key={h} style={{...hs,textAlign:h==="PPK Date"?"left":"right"}}>{h}</th>)}
-    </tr></thead><tbody>
-      {ppk.map((p,i)=> <tr key={p.date} style={{background:i%2?`${C.sa}44`:"transparent"}}>
-        <td style={{...cs,fontWeight:500}}>{p.date}</td>
-        <td style={{...cs,textAlign:"right",color:C.tm}}>{p.pd}d</td>
-        <td style={{...cs,textAlign:"right"}}><span style={{color:C.bl,fontWeight:600}}>{p.ir.toFixed(2)}%</span></td>
-        <td style={{...cs,textAlign:"right"}}>{i>0&&<CV v={(p.ir-ppk[i-1].ir)*100} f={0} s=" bp"/>}</td>
-        <td style={{...cs,textAlign:"right",color:C.tm}}>{p.df.toFixed(6)}</td>
-      </tr>)}
-    </tbody></table></div>
-  </div>;
-}
+function PPKTab({ppk}){return <div>
+  <div style={{marginBottom:"10px",fontSize:"12px",color:C.tm}}>OIS-implied PPK path (forwards between meetings).</div>
+  <div style={{overflowX:"auto"}}><table style={{borderCollapse:"collapse",width:"100%"}}><thead><tr>
+    {["PPK Date","Period","Implied","Chg","DF"].map(h=> <th key={h} style={{...hs,textAlign:h==="PPK Date"?"left":"right"}}>{h}</th>)}
+  </tr></thead><tbody>
+    {ppk.map((p,i)=> <tr key={p.date} style={{background:i%2?`${C.sa}44`:"transparent"}}>
+      <td style={{...cs,fontWeight:500}}>{p.date}</td>
+      <td style={{...cs,textAlign:"right",color:C.tm}}>{p.pd}d</td>
+      <td style={{...cs,textAlign:"right"}}><span style={{color:C.bl,fontWeight:600}}>{p.ir.toFixed(2)}%</span></td>
+      <td style={{...cs,textAlign:"right"}}>{i>0&&<CV v={(p.ir-ppk[i-1].ir)*100} f={0} s=" bp"/>}</td>
+      <td style={{...cs,textAlign:"right",color:C.tm}}>{p.df.toFixed(6)}</td>
+    </tr>)}
+  </tbody></table></div>
+</div>;}
 
 // ─── DATA ────────────────────────────────────────────────────────────
-function DataTab({oisQ,irsQ,xccyQ,uO,uI,uX,qt,oisN,irsN,xccyN}){
-  return <div style={{display:"flex",gap:"16px",flexWrap:"wrap"}}>
-    <div style={{flex:"1 1 360px"}}>
-      <div style={{fontSize:"12px",color:C.ois,fontWeight:600,marginBottom:"6px"}}>OIS (TYSO)</div>
-      <table style={{borderCollapse:"collapse",width:"100%"}}><thead><tr>
-        {["Tenor","Bid","Ask","Used"].map(h=> <th key={h} style={{...hs,textAlign:h==="Tenor"?"left":"right"}}>{h}</th>)}
-      </tr></thead><tbody>
-        {oisQ.map((x,i)=>{const u=qt==="bid"?x.bid:qt==="ask"?x.ask:(x.bid+x.ask)/2;return <tr key={x.t} style={{background:i%2?`${C.sa}44`:"transparent"}}>
-          <td style={{...cs,fontWeight:600}}>{x.t}</td>
-          <td style={{...cs,textAlign:"right"}}><RI v={x.bid} onChange={v=>uO(i,"bid",v)}/></td>
-          <td style={{...cs,textAlign:"right"}}><RI v={x.ask} onChange={v=>uO(i,"ask",v)}/></td>
-          <td style={{...cs,textAlign:"right",color:C.ois,fontWeight:600}}>{u.toFixed(2)}%</td>
-        </tr>;})}
-      </tbody></table>
-    </div>
-    <div style={{flex:"1 1 260px"}}>
-      <div style={{fontSize:"12px",color:C.irs,fontWeight:600,marginBottom:"6px"}}>IRS (TRYSAQ)</div>
-      <table style={{borderCollapse:"collapse",width:"100%"}}><thead><tr>
-        {["Tenor","Ticker","Mid"].map(h=> <th key={h} style={{...hs,textAlign:h==="Tenor"?"left":"right"}}>{h}</th>)}
-      </tr></thead><tbody>
-        {irsQ.map((x,i)=> <tr key={x.t} style={{background:i%2?`${C.sa}44`:"transparent"}}>
-          <td style={{...cs,fontWeight:600}}>{x.t}</td>
-          <td style={{...cs,color:C.tm,fontSize:"10px"}}>{x.tk}</td>
-          <td style={{...cs,textAlign:"right"}}><RI v={x.mid} onChange={v=>uI(i,v)} color={C.irs}/></td>
-        </tr>)}
-      </tbody></table>
-    </div>
-    <div style={{flex:"1 1 260px"}}>
-      <div style={{fontSize:"12px",color:C.xccy,fontWeight:600,marginBottom:"6px"}}>XCCY (TYUSSW) <span style={{color:C.tm,fontWeight:400,fontSize:"10px"}}>TRY 3M vs USD Ann</span></div>
-      <table style={{borderCollapse:"collapse",width:"100%"}}><thead><tr>
-        {["Tenor","Ticker","Mid"].map(h=> <th key={h} style={{...hs,textAlign:h==="Tenor"?"left":"right"}}>{h}</th>)}
-      </tr></thead><tbody>
-        {xccyQ.map((x,i)=> <tr key={x.t} style={{background:i%2?`${C.sa}44`:"transparent"}}>
-          <td style={{...cs,fontWeight:600}}>{x.t}</td>
-          <td style={{...cs,color:C.tm,fontSize:"10px"}}>{x.tk}</td>
-          <td style={{...cs,textAlign:"right"}}><RI v={x.mid} onChange={v=>uX(i,v)} color={C.xccy}/></td>
-        </tr>)}
-      </tbody></table>
-      <div style={{marginTop:"10px",padding:"8px",background:C.sa,borderRadius:"4px",fontSize:"10px",color:C.tm,lineHeight:"1.5"}}>
-        TYUSSW = TRY fixed rate of USD/TRY CCS.
-        TRY leg quarterly, USD leg annual (SOFR).
-        Proper bootstrap with USD SOFR curve pending.
-        Current: simplified (TRY leg only).
-      </div>
-    </div>
-  </div>;
-}
+function DataTab({oisQ,offQ,uO,uX,qt,oisN}){return <div style={{display:"flex",gap:"16px",flexWrap:"wrap"}}>
+  <div style={{flex:"1 1 380px"}}>
+    <div style={{fontSize:"12px",color:C.ois,fontWeight:600,marginBottom:"6px"}}>Onshore OIS (TYSO)</div>
+    <table style={{borderCollapse:"collapse",width:"100%"}}><thead><tr>
+      {["Tenor","Bid","Ask","Used"].map(h=> <th key={h} style={{...hs,textAlign:h==="Tenor"?"left":"right"}}>{h}</th>)}
+    </tr></thead><tbody>
+      {oisQ.map((x,i)=>{const u=qt==="bid"?x.bid:qt==="ask"?x.ask:(x.bid+x.ask)/2;return <tr key={x.t} style={{background:i%2?`${C.sa}44`:"transparent"}}>
+        <td style={{...cs,fontWeight:600}}>{x.t}</td>
+        <td style={{...cs,textAlign:"right"}}><RI v={x.bid} onChange={v=>uO(i,"bid",v)}/></td>
+        <td style={{...cs,textAlign:"right"}}><RI v={x.ask} onChange={v=>uO(i,"ask",v)}/></td>
+        <td style={{...cs,textAlign:"right",color:C.ois,fontWeight:600}}>{u.toFixed(2)}%</td>
+      </tr>;})}
+    </tbody></table>
+  </div>
+  <div style={{flex:"1 1 320px"}}>
+    <div style={{fontSize:"12px",color:C.off,fontWeight:600,marginBottom:"6px"}}>Offshore TRY (TRYI) <span style={{color:C.tm,fontWeight:400,fontSize:"10px"}}>implied deposit rates</span></div>
+    <table style={{borderCollapse:"collapse",width:"100%"}}><thead><tr>
+      {["Tenor","Ticker","Days","Rate","DF"].map(h=> <th key={h} style={{...hs,textAlign:["Tenor","Ticker"].includes(h)?"left":"right"}}>{h}</th>)}
+    </tr></thead><tbody>
+      {offQ.filter(x=>x.d>0).map((x,i)=> <tr key={x.t} style={{background:i%2?`${C.sa}44`:"transparent"}}>
+        <td style={{...cs,fontWeight:600}}>{x.t}</td>
+        <td style={{...cs,color:C.tm,fontSize:"10px"}}>{x.tk}</td>
+        <td style={{...cs,textAlign:"right",color:C.tm}}>{x.d}</td>
+        <td style={{...cs,textAlign:"right"}}><RI v={x.rate} onChange={v=>uX(offQ.indexOf(x),v)} color={C.off}/></td>
+        <td style={{...cs,textAlign:"right",color:C.tm}}>{x.df.toFixed(5)}</td>
+      </tr>)}
+    </tbody></table>
+  </div>
+</div>;}
