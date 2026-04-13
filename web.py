@@ -170,6 +170,45 @@ def api_mpc():
     return jsonify(_serialize_df(_state["mpc_results"]))
 
 
+@app.route("/api/mpc_path")
+def api_mpc_path():
+    """
+    Slider-friendly MPC path: spot rate + her PPK toplantısı için
+    implied seviye ve bir öncekine göre delta (bps).
+    
+    Frontend bunu alır, slider'larla delta'ları değiştirir,
+    kümülatif toplamla forward path'i yeniden hesaplar.
+    """
+    if _state["mpc_results"] is None or _state["market"] is None:
+        return jsonify({"error": "Veri yok"}), 503
+
+    spot = _state["market"].bisttref_rate
+    mpc_df = _state["mpc_results"]
+
+    meetings = []
+    prev_rate = spot
+
+    for _, row in mpc_df.iterrows():
+        impl = row["implied_mpc"]
+        # Delta: implied seviye − bir önceki seviye, 25 bps'e yuvarla
+        raw_delta = impl - prev_rate
+        rounded_delta = round(raw_delta * 100 / 25) * 25  # bps, 25'e yuvarla
+
+        meetings.append({
+            "date": row["ppk_date"].isoformat() if hasattr(row["ppk_date"], "isoformat") else str(row["ppk_date"]),
+            "implied_rate": round(impl, 2),
+            "implied_delta_bps": int(rounded_delta),
+            "period_days": int(row["period_days"]),
+        })
+
+        prev_rate = impl
+
+    return jsonify({
+        "spot_rate": round(spot, 2),
+        "meetings": meetings,
+    })
+
+
 @app.route("/api/refresh", methods=["POST"])
 def api_refresh():
     try:
