@@ -3,185 +3,478 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>OIS Pricer</title>
+<title>OIS Pricer — FETM Research</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
 <style>
 *{margin:0;padding:0;box-sizing:border-box}
-:root{--bg:#060A14;--bg-card:#0D1117;--bg-hover:#161B22;--border:#1B2433;--text:#E6EDF3;--muted:#8B949E;--dim:#484F58;--blue:#58A6FF;--green:#3FB950;--amber:#D29922;--red:#F85149;--cyan:#39D2C0;--head:'DM Sans',sans-serif;--mono:'JetBrains Mono',monospace}
+:root{--bg:#060A14;--sf:#0D1117;--sa:#161B22;--bd:#1B2433;--tx:#E6EDF3;--tm:#8B949E;--dm:#484F58;--bl:#58A6FF;--gn:#3FB950;--am:#D29922;--rd:#F85149;--cy:#39D2C0;--of:#F0883E;--head:'DM Sans',sans-serif;--mono:'JetBrains Mono',monospace}
 html{font-size:14px}
-body{background:var(--bg);color:var(--text);font-family:var(--head);min-height:100vh;background-image:linear-gradient(rgba(88,166,255,.03) 1px,transparent 1px),linear-gradient(90deg,rgba(88,166,255,.03) 1px,transparent 1px);background-size:40px 40px}
-.hdr{display:flex;align-items:center;justify-content:space-between;padding:.8rem 1.5rem;border-bottom:1px solid var(--border);background:rgba(13,17,23,.95);backdrop-filter:blur(12px);position:sticky;top:0;z-index:100}
-.hdr h1{font-size:1.15rem;font-weight:700;display:flex;align-items:center;gap:.4rem}
-.hdr .dot{width:7px;height:7px;border-radius:50%;background:var(--green);box-shadow:0 0 8px var(--green);animation:pulse 2s ease-in-out infinite}
+body{background:var(--bg);color:var(--tx);font-family:var(--head);min-height:100vh;background-image:linear-gradient(rgba(88,166,255,.03) 1px,transparent 1px),linear-gradient(90deg,rgba(88,166,255,.03) 1px,transparent 1px);background-size:40px 40px}
+
+/* Header */
+.hdr{display:flex;align-items:center;justify-content:space-between;padding:10px 20px;border-bottom:1px solid var(--bd);background:rgba(13,17,23,.95);backdrop-filter:blur(12px);position:sticky;top:0;z-index:100;flex-wrap:wrap;gap:8px}
+.hdr-left{display:flex;align-items:center;gap:10px}
+.hdr-bar{width:4px;height:28px;background:var(--bl);border-radius:2px}
+.hdr h1{font-size:1.1rem;font-weight:700}
+.hdr-sub{font-size:.65rem;color:var(--tm);font-family:var(--mono)}
+.hdr-right{display:flex;align-items:center;gap:14px;flex-wrap:wrap}
+.hdr-stat{font-size:.72rem;color:var(--tm)}
+.hdr-stat .v{color:var(--tx);font-family:var(--mono);font-weight:500}
+.dot{width:7px;height:7px;border-radius:50%;display:inline-block;margin-right:4px}
+.dot-live{background:var(--gn);box-shadow:0 0 8px var(--gn);animation:pulse 2s ease-in-out infinite}
+.dot-stale{background:var(--am)}
 @keyframes pulse{0%,100%{opacity:1}50%{opacity:.4}}
-.hdr-meta{display:flex;gap:1.2rem;font-size:.75rem;color:var(--muted)}
-.hdr-meta .v{color:var(--text);font-family:var(--mono);font-weight:500}
-.btn{background:transparent;border:1px solid var(--border);color:var(--blue);padding:.35rem .75rem;border-radius:5px;font-family:var(--head);font-size:.75rem;cursor:pointer;transition:all .2s}
-.btn:hover{background:rgba(88,166,255,.1);border-color:var(--blue)}
-.dash{display:grid;grid-template-columns:1fr 320px;gap:.9rem;padding:1.2rem 1.5rem;max-width:1500px;margin:0 auto}
-.full{grid-column:1/3}
-.card{background:var(--bg-card);border:1px solid var(--border);border-radius:8px;overflow:hidden}
-.card-h{padding:.6rem 1rem;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between}
-.card-t{font-size:.78rem;font-weight:600;letter-spacing:.02em;text-transform:uppercase;color:var(--muted)}
-.card-b{padding:.8rem 1rem}
-.chart-wrap{position:relative;height:300px}
-.tenor-btns{display:flex;flex-wrap:wrap;gap:.3rem;margin-bottom:.8rem}
-.tbtn{background:var(--bg);border:1px solid var(--border);color:var(--muted);padding:.25rem .5rem;border-radius:4px;font-family:var(--mono);font-size:.7rem;cursor:pointer;transition:all .15s}
-.tbtn:hover,.tbtn.on{border-color:var(--blue);color:var(--blue);background:rgba(88,166,255,.08)}
-.linp{flex:1;background:var(--bg);border:1px solid var(--border);border-radius:5px;padding:.5rem .7rem;color:var(--text);font-family:var(--mono);font-size:.9rem;outline:none}
-.linp:focus{border-color:var(--blue)}
-.lbtn{background:var(--blue);color:#fff;border:none;padding:.5rem .9rem;border-radius:5px;cursor:pointer;font-weight:600;font-size:.8rem}
-.res-grid{display:grid;grid-template-columns:1fr 1fr;gap:.5rem}
-.res-item{background:var(--bg);border-left:3px solid var(--blue);border-radius:0 5px 5px 0;padding:.6rem .8rem}
-.res-item.g{border-left-color:var(--green)}.res-item.a{border-left-color:var(--amber)}.res-item.c{border-left-color:var(--cyan)}
-.res-l{font-size:.65rem;color:var(--dim);text-transform:uppercase;letter-spacing:.05em;margin-bottom:.15rem}
-.res-v{font-family:var(--mono);font-size:1.05rem;font-weight:600}
-.mpc-grid{display:grid;grid-template-columns:1fr 1fr;gap:.9rem}
-@media(max-width:1100px){.mpc-grid{grid-template-columns:1fr}}
-.summary{display:flex;gap:1.5rem;padding:.6rem 1rem;background:var(--bg);border-radius:6px;margin-bottom:.8rem;align-items:center;flex-wrap:wrap}
-.sum-item{display:flex;flex-direction:column;gap:.1rem}
-.sum-label{font-size:.65rem;color:var(--dim);text-transform:uppercase;letter-spacing:.04em}
+.btn{background:transparent;border:1px solid var(--bd);color:var(--bl);padding:5px 12px;border-radius:5px;font-family:var(--head);font-size:.72rem;cursor:pointer;transition:all .2s;font-weight:600}
+.btn:hover{background:rgba(88,166,255,.1);border-color:var(--bl)}
+
+/* Tabs */
+.tabs{display:flex;border-bottom:1px solid var(--bd);background:var(--sf);padding:0 20px;overflow-x:auto}
+.tab{padding:10px 16px;font-size:.78rem;font-weight:600;border:none;border-bottom:2px solid transparent;background:transparent;color:var(--tm);cursor:pointer;white-space:nowrap;transition:all .15s}
+.tab:hover{color:var(--tx)}
+.tab.on{color:var(--tx);border-bottom-color:var(--bl)}
+
+/* Layout */
+.pane{display:none;padding:16px 20px}
+.pane.on{display:block}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.grid3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px}
+@media(max-width:900px){.grid2,.grid3{grid-template-columns:1fr}}
+
+/* Cards */
+.card{background:var(--sf);border:1px solid var(--bd);border-radius:8px;overflow:hidden;margin-bottom:12px}
+.card-h{padding:8px 14px;border-bottom:1px solid var(--bd);display:flex;align-items:center;justify-content:space-between}
+.card-t{font-size:.72rem;font-weight:600;letter-spacing:.03em;text-transform:uppercase;color:var(--tm)}
+.card-b{padding:10px 14px}
+.chart-wrap{position:relative;height:280px}
+
+/* Tables */
+.dtable{width:100%;border-collapse:collapse;font-size:.76rem}
+.dtable thead th{text-align:left;padding:5px 8px;color:var(--dm);font-weight:500;font-size:.66rem;text-transform:uppercase;letter-spacing:.05em;border-bottom:1px solid var(--bd);position:sticky;top:0;background:var(--sf);z-index:1}
+.dtable tbody td{padding:5px 8px;border-bottom:1px solid rgba(27,36,51,.4);font-family:var(--mono);font-size:.76rem;vertical-align:middle}
+.dtable tbody tr:hover{background:var(--sa)}
+.r{text-align:right}.c{text-align:center}
+.c-gn{color:var(--gn)}.c-rd{color:var(--rd)}.c-am{color:var(--am)}.c-bl{color:var(--bl)}.c-tm{color:var(--tm)}.c-of{color:var(--of)}.c-cy{color:var(--cy)}
+.fw6{font-weight:600}
+
+/* Summary strip */
+.summary{display:flex;gap:20px;padding:8px 14px;background:var(--bg);border-radius:6px;margin-bottom:10px;align-items:center;flex-wrap:wrap}
+.sum-item{display:flex;flex-direction:column;gap:2px}
+.sum-label{font-size:.62rem;color:var(--dm);text-transform:uppercase;letter-spacing:.04em}
 .sum-val{font-family:var(--mono);font-size:1rem;font-weight:600}
-.mtable{width:100%;border-collapse:collapse;font-size:.78rem}
-.mtable thead th{text-align:left;padding:.4rem .6rem;color:var(--dim);font-weight:500;font-size:.68rem;text-transform:uppercase;letter-spacing:.05em;border-bottom:1px solid var(--border)}
-.mtable tbody td{padding:.35rem .6rem;border-bottom:1px solid rgba(27,36,51,.4);vertical-align:middle}
-.mtable tbody tr:hover{background:var(--bg-hover)}
-.slider-cell{display:flex;align-items:center;gap:0}
-.step-btn{background:var(--bg);border:1px solid var(--border);color:var(--muted);width:28px;height:28px;display:flex;align-items:center;justify-content:center;cursor:pointer;font-size:13px;font-weight:700;transition:all .12s;user-select:none;line-height:1}
-.step-btn:hover{background:var(--bg-hover);color:var(--text);border-color:var(--blue)}
-.step-btn:active{background:rgba(88,166,255,.15)}
-.step-btn.dn{border-radius:4px 0 0 4px;color:var(--green)}
-.step-btn.up{border-radius:0 4px 4px 0;color:var(--red)}
-.step-btn.dn:hover{border-color:var(--green);background:rgba(63,185,80,.1)}
-.step-btn.up:hover{border-color:var(--red);background:rgba(248,81,73,.1)}
-.delta-input{width:52px;height:28px;border:1px solid var(--border);border-left:none;border-right:none;background:var(--bg);color:var(--text);font-family:var(--mono);font-size:.82rem;font-weight:600;text-align:center;outline:none;-moz-appearance:textfield}
-.delta-input::-webkit-inner-spin-button,.delta-input::-webkit-outer-spin-button{-webkit-appearance:none;margin:0}
-.delta-input:focus{border-color:var(--blue);background:rgba(88,166,255,.05)}
-.delta-input.neg{color:var(--green)}.delta-input.pos{color:var(--red)}.delta-input.zero{color:var(--dim)}
-.rate-val{font-family:var(--mono);font-weight:500;color:var(--amber);text-align:right}
-.fwd-chart{width:100%;height:280px}
-table.dtable{width:100%;border-collapse:collapse;font-size:.78rem}
-table.dtable thead th{text-align:left;padding:.4rem .6rem;color:var(--dim);font-weight:500;font-size:.68rem;text-transform:uppercase;letter-spacing:.05em;border-bottom:1px solid var(--border)}
-table.dtable tbody td{padding:.4rem .6rem;border-bottom:1px solid rgba(27,36,51,.4);font-family:var(--mono);font-size:.78rem}
-table.dtable tbody tr:hover{background:var(--bg-hover)}
-.c-pos{color:var(--green)}.c-neg{color:var(--red)}.c-mut{color:var(--muted)}
-.footer{text-align:center;padding:1.2rem;color:var(--dim);font-size:.65rem;letter-spacing:.05em;text-transform:uppercase}
+
+/* Metric cards */
+.metric{background:var(--bg);border-left:3px solid var(--bl);border-radius:0 5px 5px 0;padding:8px 12px}
+.metric-l{font-size:.62rem;color:var(--dm);text-transform:uppercase;letter-spacing:.05em;margin-bottom:2px}
+.metric-v{font-family:var(--mono);font-size:1.05rem;font-weight:600}
+
+/* MPC slider */
+.slider-cell{display:flex;align-items:center}
+.step-btn{background:var(--bg);border:1px solid var(--bd);color:var(--tm);width:26px;height:26px;display:flex;align-items:center;justify-content:center;cursor:pointer;font-size:12px;font-weight:700;transition:all .12s;user-select:none}
+.step-btn:hover{background:var(--sa);color:var(--tx);border-color:var(--bl)}
+.step-btn.dn{border-radius:4px 0 0 4px;color:var(--gn)}
+.step-btn.up{border-radius:0 4px 4px 0;color:var(--rd)}
+.step-btn.dn:hover{border-color:var(--gn);background:rgba(63,185,80,.1)}
+.step-btn.up:hover{border-color:var(--rd);background:rgba(248,81,73,.1)}
+.delta-input{width:50px;height:26px;border:1px solid var(--bd);border-left:none;border-right:none;background:var(--bg);color:var(--tx);font-family:var(--mono);font-size:.78rem;font-weight:600;text-align:center;outline:none;-moz-appearance:textfield}
+.delta-input::-webkit-inner-spin-button,.delta-input::-webkit-outer-spin-button{-webkit-appearance:none}
+.delta-input:focus{border-color:var(--bl);background:rgba(88,166,255,.05)}
+.delta-input.neg{color:var(--gn)}.delta-input.pos{color:var(--rd)}.delta-input.zero{color:var(--dm)}
+
+/* Tenor buttons */
+.tenor-btns{display:flex;flex-wrap:wrap;gap:4px;margin-bottom:8px}
+.tbtn{background:var(--bg);border:1px solid var(--bd);color:var(--tm);padding:3px 8px;border-radius:4px;font-family:var(--mono);font-size:.68rem;cursor:pointer;transition:all .15s}
+.tbtn:hover,.tbtn.on{border-color:var(--bl);color:var(--bl);background:rgba(88,166,255,.08)}
+
+/* Lookup input */
+.linp{flex:1;background:var(--bg);border:1px solid var(--bd);border-radius:5px;padding:6px 10px;color:var(--tx);font-family:var(--mono);font-size:.85rem;outline:none}
+.linp:focus{border-color:var(--bl)}
+.lbtn{background:var(--bl);color:#fff;border:none;padding:6px 14px;border-radius:5px;cursor:pointer;font-weight:600;font-size:.78rem}
+
+/* Section label */
+.sec-label{padding:6px 8px;border-bottom:1px solid var(--bd);background:var(--bg)}
+.sec-label span{font-size:.72rem;font-weight:700}
+.sec-label .cnt{color:var(--tm);font-size:.66rem;margin-left:6px}
+
+/* SVG chart */
+.fwd-chart{width:100%;height:260px}
+
+/* Footer */
+.footer{text-align:center;padding:14px;color:var(--dm);font-size:.62rem;letter-spacing:.06em;text-transform:uppercase;font-family:var(--mono)}
 </style>
 </head>
 <body>
+
+<!-- HEADER -->
 <header class="hdr">
-  <h1><span class="dot"></span>OIS Pricer</h1>
-  <div class="hdr-meta">
-    <span>BISTTREF <span class="v" id="h-bis">—</span></span>
-    <span>Grid <span class="v" id="h-grid">—</span></span>
-    <span><span class="v" id="h-upd">—</span></span>
+  <div class="hdr-left">
+    <div class="hdr-bar"></div>
+    <div>
+      <h1>OIS Pricer</h1>
+      <div class="hdr-sub">
+        <span style="color:var(--gn)">Onshore OIS</span> ·
+        <span style="color:var(--of)">Offshore TRYI</span> ·
+        Bond Z-Spread · Implied PPK
+      </div>
+    </div>
+  </div>
+  <div class="hdr-right">
+    <span class="hdr-stat"><span class="dot dot-live" id="h-dot"></span>BISTTREF <span class="v" id="h-bis">—</span></span>
+    <span class="hdr-stat">VD <span class="v" id="h-vd">—</span></span>
+    <span class="hdr-stat">Nodes <span class="v" id="h-nodes">—</span></span>
+    <span class="hdr-stat" id="h-upd">—</span>
     <button class="btn" onclick="refreshAll()">↻ Yenile</button>
   </div>
 </header>
-<main class="dash">
-  <section class="card">
-    <div class="card-h"><span class="card-t">Onshore OIS Eğrisi — ACT/365</span><span style="font-size:.7rem;color:var(--dim)" id="curve-info"></span></div>
-    <div class="card-b"><div class="chart-wrap"><canvas id="oisChart"></canvas></div></div>
-  </section>
-  <section class="card">
-    <div class="card-h"><span class="card-t">Vade Sorgula</span></div>
-    <div class="card-b">
-      <div class="tenor-btns" id="tenor-btns"></div>
-      <div style="display:flex;gap:.4rem;margin-bottom:.9rem">
-        <input type="number" class="linp" id="dtm-in" placeholder="DTM (gün)" min="1" max="4000" onkeydown="if(event.key==='Enter')doLookup()">
-        <button class="lbtn" onclick="doLookup()">Ara</button>
-      </div>
-      <div class="res-grid">
-        <div class="res-item"><div class="res-l">Spot OIS</div><div class="res-v" id="r-rate">—</div></div>
-        <div class="res-item g"><div class="res-l">Discount Factor</div><div class="res-v" id="r-df">—</div></div>
-        <div class="res-item a"><div class="res-l">Zero Coupon</div><div class="res-v" id="r-zc">—</div></div>
-        <div class="res-item c"><div class="res-l">Gross-Up</div><div class="res-v" id="r-gu">—</div></div>
-      </div>
-      <div style="margin-top:.8rem;border-top:1px solid var(--border);padding-top:.6rem;font-family:var(--mono);font-size:.75rem;color:var(--muted)" id="cross-info">Eğri veya tenor ile sorgula</div>
-    </div>
-  </section>
 
-  <!-- ═══ MPC Patikası ═══ -->
-  <section class="card full">
-    <div class="card-h">
-      <span class="card-t">PPK Faiz Patikası</span>
-      <div style="display:flex;gap:.4rem">
-        <button class="btn" onclick="resetToImplied()">↺ Implied'a Dön</button>
-        <button class="btn" onclick="clearAllCuts()">Sıfırla</button>
-      </div>
+<!-- TABS -->
+<nav class="tabs">
+  <button class="tab on" data-tab="bonds">Bonds</button>
+  <button class="tab" data-tab="curves">Curves & Basis</button>
+  <button class="tab" data-tab="ppk">Implied PPK</button>
+  <button class="tab" data-tab="pricing">OIS Pricing</button>
+  <button class="tab" data-tab="data">Market Data</button>
+</nav>
+
+<!-- ═══ BONDS ═══ -->
+<div class="pane on" id="pane-bonds">
+  <div class="grid2" id="bond-charts"></div>
+  <div class="card">
+    <div class="card-h"><span class="card-t">Bond Z-Spread Analysis</span><span class="card-t" id="bond-info"></span></div>
+    <div class="card-b" style="overflow-x:auto;max-height:500px;overflow-y:auto">
+      <table class="dtable"><thead><tr>
+        <th>ISIN</th><th>Mat</th><th class="r">Days</th><th class="r">Cpn</th><th class="r">Last</th>
+        <th class="r">Z/OIS</th><th class="r">Z/Off</th><th class="r">Δ</th>
+      </tr></thead><tbody id="bond-tbody"><tr><td colspan="8" class="c c-tm" style="padding:20px">Yükleniyor...</td></tr></tbody></table>
     </div>
-    <div class="card-b">
-      <div class="summary">
-        <div class="sum-item"><div class="sum-label">Spot TLREF</div><div class="sum-val" style="color:var(--blue)" id="s-spot">—</div></div>
-        <div class="sum-item"><div class="sum-label">Toplam Değişim</div><div class="sum-val" id="s-total">—</div></div>
-        <div class="sum-item"><div class="sum-label">Terminal Rate</div><div class="sum-val" style="color:var(--amber)" id="s-term">—</div></div>
-      </div>
-      <div class="mpc-grid">
-        <div style="max-height:380px;overflow-y:auto">
-          <table class="mtable">
-            <thead><tr><th>PPK Tarihi</th><th style="text-align:center;width:50px">Period</th><th style="text-align:center">Δ (bps)</th><th style="text-align:right">TLREF</th></tr></thead>
-            <tbody id="mpc-tbody"></tbody>
-          </table>
+  </div>
+</div>
+
+<!-- ═══ CURVES ═══ -->
+<div class="pane" id="pane-curves">
+  <div class="grid2">
+    <div class="card"><div class="card-h"><span class="card-t">Zero Curves — OIS (365) vs Offshore (360)</span></div>
+      <div class="card-b"><div class="chart-wrap"><canvas id="zeroCurveChart"></canvas></div></div></div>
+    <div class="card"><div class="card-h"><span class="card-t">Offshore − OIS Basis (bp)</span></div>
+      <div class="card-b"><div class="chart-wrap"><canvas id="basisChart"></canvas></div></div></div>
+  </div>
+  <div class="grid2">
+    <div class="card"><div class="card-h"><span class="card-t">OIS Discount Factors</span></div>
+      <div class="card-b"><div class="chart-wrap"><canvas id="dfChart"></canvas></div></div></div>
+    <div class="card"><div class="card-h"><span class="card-t">Vade Sorgula</span></div>
+      <div class="card-b">
+        <div class="tenor-btns" id="tenor-btns"></div>
+        <div style="display:flex;gap:6px;margin-bottom:10px">
+          <input type="number" class="linp" id="dtm-in" placeholder="DTM (gün)" min="1" max="4000" onkeydown="if(event.key==='Enter')doLookup()">
+          <button class="lbtn" onclick="doLookup()">Ara</button>
         </div>
-        <div>
-          <svg id="fwd-svg" class="fwd-chart" viewBox="0 0 600 280" preserveAspectRatio="xMidYMid meet"></svg>
+        <div class="grid2" style="gap:6px">
+          <div class="metric"><div class="metric-l">Zero Rate (OIS)</div><div class="metric-v c-bl" id="r-zr">—</div></div>
+          <div class="metric" style="border-left-color:var(--gn)"><div class="metric-l">Discount Factor</div><div class="metric-v c-gn" id="r-df">—</div></div>
+          <div class="metric" style="border-left-color:var(--am)"><div class="metric-l">Gross-Up</div><div class="metric-v c-am" id="r-gu">—</div></div>
+          <div class="metric" style="border-left-color:var(--of)"><div class="metric-l">Offshore ZR</div><div class="metric-v c-of" id="r-off">—</div></div>
         </div>
       </div>
     </div>
-  </section>
+  </div>
+</div>
 
-  <!-- OIS Fiyatlama — Model vs Piyasa -->
-  <section class="card full">
-    <div class="card-h">
-      <span class="card-t">OIS Fiyatlama — Model vs Piyasa</span>
-      <span style="font-size:.7rem;color:var(--dim)" id="model-info"></span>
+<!-- ═══ PPK ═══ -->
+<div class="pane" id="pane-ppk">
+  <div class="summary">
+    <div class="sum-item"><div class="sum-label">Spot TLREF</div><div class="sum-val c-bl" id="s-spot">—</div></div>
+    <div class="sum-item"><div class="sum-label">Toplam Değişim</div><div class="sum-val" id="s-total">—</div></div>
+    <div class="sum-item"><div class="sum-label">Terminal Rate</div><div class="sum-val c-am" id="s-term">—</div></div>
+    <div style="flex:1"></div>
+    <button class="btn" onclick="resetToImplied()">↺ Implied'a Dön</button>
+    <button class="btn" onclick="clearAllCuts()">Sıfırla</button>
+  </div>
+  <div class="grid2">
+    <div class="card"><div class="card-h"><span class="card-t">PPK Faiz Patikası</span></div>
+      <div class="card-b" style="max-height:420px;overflow-y:auto">
+        <table class="dtable"><thead><tr>
+          <th>PPK Tarihi</th><th class="c" style="width:48px">Period</th><th class="c">Δ (bps)</th><th class="r">TLREF</th>
+        </tr></thead><tbody id="mpc-tbody"></tbody></table>
+      </div>
     </div>
-    <div class="card-b">
-      <table class="dtable">
-        <thead><tr>
-          <th>Tenor</th><th>Vade</th><th style="text-align:right">Gün</th><th style="text-align:center">Tip</th>
-          <th style="text-align:right">Model</th><th style="text-align:right">Piyasa</th><th style="text-align:right">Fark (bps)</th>
-        </tr></thead>
-        <tbody id="model-tbody"><tr><td colspan="7" style="text-align:center;color:var(--dim);padding:1.5rem">Patika yükleniyor...</td></tr></tbody>
-      </table>
+    <div>
+      <div class="card"><div class="card-h"><span class="card-t">Forward Rate Path</span></div>
+        <div class="card-b"><svg id="fwd-svg" class="fwd-chart" viewBox="0 0 600 260" preserveAspectRatio="xMidYMid meet"></svg></div>
+      </div>
     </div>
-  </section>
+  </div>
+  <!-- Model vs Market -->
+  <div class="card">
+    <div class="card-h"><span class="card-t">OIS Fiyatlama — Model vs Piyasa</span><span class="card-t" id="model-info"></span></div>
+    <div class="card-b" style="overflow-x:auto">
+      <table class="dtable"><thead><tr>
+        <th>Tenor</th><th>Vade</th><th class="r">Gün</th><th class="c">Tip</th>
+        <th class="r">Model</th><th class="r">Piyasa</th><th class="r">Fark (bps)</th>
+      </tr></thead><tbody id="model-tbody"><tr><td colspan="7" class="c c-tm" style="padding:20px">Patika yükleniyor...</td></tr></tbody></table>
+    </div>
+  </div>
+</div>
 
-  <!-- TLREF Spreads -->
-  <section class="card full">
-    <div class="card-h"><span class="card-t">TLREF Spreads</span></div>
-    <div class="card-b">
-      <table class="dtable">
-        <thead><tr><th>ISIN</th><th>Vade</th><th style="text-align:right">DTM</th><th style="text-align:right">Dirty</th><th style="text-align:right">Spread (bps)</th></tr></thead>
-        <tbody id="sp-tbody"><tr><td colspan="5" style="text-align:center;color:var(--dim);padding:1.5rem">Yükleniyor...</td></tr></tbody>
-      </table>
+<!-- ═══ OIS PRICING (Curve Details) ═══ -->
+<div class="pane" id="pane-pricing">
+  <div class="card">
+    <div class="card-h"><span class="card-t">OIS Curve — Bootstrap Nodes</span></div>
+    <div class="card-b" style="overflow-x:auto;max-height:600px;overflow-y:auto">
+      <table class="dtable"><thead><tr>
+        <th>Tenor</th><th>Date</th><th class="r">Days</th><th class="r">Par Rate (%)</th>
+        <th class="r">Zero Rate (%)</th><th class="r">DF</th>
+      </tr></thead><tbody id="curve-tbody"></tbody></table>
     </div>
-  </section>
-</main>
+  </div>
+</div>
+
+<!-- ═══ MARKET DATA ═══ -->
+<div class="pane" id="pane-data">
+  <div class="grid2">
+    <div class="card"><div class="card-h"><span class="card-t" style="color:var(--gn)">Onshore OIS (TYSO)</span></div>
+      <div class="card-b" style="overflow-x:auto">
+        <table class="dtable"><thead><tr><th>Tenor</th><th class="r">Bid</th><th class="r">Ask</th><th class="r">Mid</th></tr></thead>
+        <tbody id="ois-data-tbody"></tbody></table>
+      </div>
+    </div>
+    <div class="card"><div class="card-h"><span class="card-t" style="color:var(--of)">Offshore TRY (TRYI · Act/360)</span></div>
+      <div class="card-b" style="overflow-x:auto">
+        <table class="dtable"><thead><tr><th>Tenor</th><th class="r">Days</th><th class="r">Rate</th><th class="r">DF</th></tr></thead>
+        <tbody id="off-data-tbody"></tbody></table>
+      </div>
+    </div>
+  </div>
+</div>
+
 <footer class="footer">OIS PRICER — FETM RESEARCH</footer>
 
 <script>
-let curveData=[],oisChart=null,spotRate=0,meetings=[],impliedDeltas=[];
-const TENORS=[{l:'O/N',d:1},{l:'1W',d:7},{l:'1M',d:30},{l:'3M',d:91},{l:'6M',d:183},{l:'9M',d:275},{l:'1Y',d:365},{l:'2Y',d:731},{l:'3Y',d:1098},{l:'5Y',d:1826},{l:'7Y',d:2557},{l:'10Y',d:3653}];
+/* ═══ Global State ═══ */
+let curveData=[],offshoreData=[],basisData=[];
+let bondData=[],mpcData=[],mpcPath=null;
+let spotRate=0,meetings=[],impliedDeltas=[];
+let charts={};
 
+const TENORS=[{l:'O/N',d:1},{l:'1W',d:7},{l:'1M',d:30},{l:'3M',d:91},{l:'6M',d:183},{l:'9M',d:275},{l:'1Y',d:365},{l:'2Y',d:731},{l:'3Y',d:1098},{l:'5Y',d:1826},{l:'10Y',d:3653}];
+
+/* ═══ Tab Switch ═══ */
+document.querySelectorAll('.tab').forEach(t=>t.addEventListener('click',()=>{
+  document.querySelectorAll('.tab').forEach(x=>x.classList.remove('on'));
+  document.querySelectorAll('.pane').forEach(x=>x.classList.remove('on'));
+  t.classList.add('on');
+  document.getElementById('pane-'+t.dataset.tab).classList.add('on');
+}));
+
+/* ═══ Init ═══ */
 document.addEventListener('DOMContentLoaded',()=>{
   const c=document.getElementById('tenor-btns');
-  TENORS.forEach(t=>{const b=document.createElement('button');b.className='tbtn';b.textContent=t.l;b.onclick=()=>{document.getElementById('dtm-in').value=t.d;document.querySelectorAll('.tbtn').forEach(x=>x.classList.remove('on'));b.classList.add('on');doLookup()};c.appendChild(b)});
+  TENORS.forEach(t=>{const b=document.createElement('button');b.className='tbtn';b.textContent=t.l;
+    b.onclick=()=>{document.getElementById('dtm-in').value=t.d;document.querySelectorAll('.tbtn').forEach(x=>x.classList.remove('on'));b.classList.add('on');doLookup()};c.appendChild(b)});
   loadAll();
+  connectSSE();
 });
 
-async function loadAll(){await Promise.all([loadStatus(),loadCurve(),loadMPCPath(),loadSpreads()])}
-async function refreshAll(){const b=document.querySelector('.hdr .btn');b.textContent='↻ ...';b.disabled=true;try{await fetch('/api/refresh',{method:'POST'});await loadAll()}catch(e){console.error(e)}b.textContent='↻ Yenile';b.disabled=false}
+/* ═══ Data Loading ═══ */
+async function loadAll(){
+  await Promise.all([loadStatus(),loadCurve(),loadOffshore(),loadBasis(),loadBonds(),loadMPCPath(),loadMarketData()]);
+}
 
-async function loadStatus(){try{const d=await(await fetch('/api/status')).json();document.getElementById('h-bis').textContent=d.bisttref?d.bisttref.toFixed(2)+'%':'—';document.getElementById('h-grid').textContent=d.grid_size||'—';if(d.last_update){const t=new Date(d.last_update);document.getElementById('h-upd').textContent=t.toLocaleTimeString('tr-TR',{hour:'2-digit',minute:'2-digit',second:'2-digit'})}}catch(e){console.error(e)}}
+async function refreshAll(){
+  const b=document.querySelector('.hdr .btn');b.textContent='↻ ...';b.disabled=true;
+  try{await fetch('/api/refresh',{method:'POST'});await loadAll();}catch(e){console.error(e)}
+  b.textContent='↻ Yenile';b.disabled=false;
+}
 
-async function loadCurve(){try{curveData=await(await fetch('/api/curve')).json();renderChart();const p=curveData.filter(d=>d.DTM>0);document.getElementById('curve-info').textContent=`${curveData.length} nokta | ${Math.min(...p.map(d=>d.spot_ois)).toFixed(1)}%–${Math.max(...p.map(d=>d.spot_ois)).toFixed(1)}%`}catch(e){console.error(e)}}
+async function loadStatus(){
+  try{const d=await(await fetch('/api/status')).json();
+    document.getElementById('h-bis').textContent=d.bisttref?d.bisttref.toFixed(2)+'%':'—';
+    document.getElementById('h-vd').textContent=d.value_date||'—';
+    document.getElementById('h-nodes').textContent=d.ois_nodes||'—';
+    if(d.last_update){const t=new Date(d.last_update);
+      document.getElementById('h-upd').textContent=t.toLocaleTimeString('tr-TR',{hour:'2-digit',minute:'2-digit',second:'2-digit'});}
+  }catch(e){console.error(e)}
+}
 
-async function loadMPCPath(){try{const d=await(await fetch('/api/mpc_path')).json();spotRate=d.spot_rate;meetings=d.meetings.map(m=>({...m,delta_bps:m.implied_delta_bps}));impliedDeltas=d.meetings.map(m=>m.implied_delta_bps);renderMPC();fetchModelRates()}catch(e){console.error(e)}}
+async function loadCurve(){
+  try{curveData=await(await fetch('/api/curve')).json();
+    renderCurveTable();renderDFChart();
+  }catch(e){console.error(e)}
+}
 
-async function loadSpreads(){try{const data=await(await fetch('/api/spreads')).json();const tb=document.getElementById('sp-tbody');if(!data.length){tb.innerHTML='<tr><td colspan="5" style="text-align:center;color:var(--dim);padding:1.5rem">Tahvil verisi yok</td></tr>';return}tb.innerHTML=data.map(d=>{const cls=d.ois_spread_bps==null?'c-mut':(d.ois_spread_bps>=0?'c-pos':'c-neg');const sp=d.ois_spread_bps!=null?(d.ois_spread_bps>=0?'+':'')+d.ois_spread_bps.toFixed(1):'—';return`<tr><td style="font-size:.74rem">${d.isin}</td><td>${d.maturity}</td><td style="text-align:right">${d.DTM}</td><td style="text-align:right">${d.px_last.toFixed(2)}</td><td style="text-align:right" class="${cls}">${sp}</td></tr>`}).join('')}catch(e){console.error(e)}}
+async function loadOffshore(){
+  try{offshoreData=await(await fetch('/api/offshore_curve')).json();
+    renderZeroCurveChart();
+  }catch(e){console.error(e)}
+}
+
+async function loadBasis(){
+  try{basisData=await(await fetch('/api/basis')).json();
+    renderBasisChart();
+  }catch(e){console.error(e)}
+}
+
+async function loadBonds(){
+  try{bondData=await(await fetch('/api/bonds')).json();
+    renderBondTable();renderBondCharts();
+  }catch(e){console.error(e)}
+}
+
+async function loadMPCPath(){
+  try{const d=await(await fetch('/api/mpc_path')).json();
+    spotRate=d.spot_rate;meetings=d.meetings.map(m=>({...m,delta_bps:m.implied_delta_bps}));
+    impliedDeltas=d.meetings.map(m=>m.implied_delta_bps);
+    renderMPC();fetchModelRates();
+  }catch(e){console.error(e)}
+}
+
+async function loadMarketData(){
+  try{const d=await(await fetch('/api/market_data')).json();
+    renderOISData(d.ois);renderOffshoreData(d.offshore);
+  }catch(e){console.error(e)}
+}
+
+/* ═══ SSE ═══ */
+function connectSSE(){
+  try{const es=new EventSource('/api/events');
+    es.onmessage=e=>{const d=JSON.parse(e.data);if(d.type==='update')loadAll();};
+    es.onerror=()=>{setTimeout(connectSSE,5000);es.close();};
+  }catch(e){console.log('SSE not available')}
+}
+
+/* ═══ Bond Table ═══ */
+function renderBondTable(){
+  const tb=document.getElementById('bond-tbody');
+  if(!bondData.length){tb.innerHTML='<tr><td colspan="8" class="c c-tm" style="padding:20px">Tahvil verisi yok</td></tr>';return;}
+
+  const groups=[{k:'flt',l:'TLREF-Linked (Floating)',c:'var(--cy)'},{k:'fix',l:'Fixed Coupon',c:'var(--bl)'},{k:'zcb',l:'Zero Coupon',c:'var(--am)'}];
+  let html='';
+  groups.forEach(g=>{
+    const items=bondData.filter(b=>b.bond_type===g.k);if(!items.length)return;
+    html+=`<tr><td colspan="8" class="sec-label"><span style="color:${g.c}">${g.l}</span><span class="cnt">${items.length}</span></td></tr>`;
+    items.forEach((b,i)=>{
+      const zsO=b.zspread_ois!=null?(b.zspread_ois>=0?'+':'')+b.zspread_ois.toFixed(1):'—';
+      const zsX=b.zspread_offshore!=null?(b.zspread_offshore>=0?'+':'')+b.zspread_offshore.toFixed(1):'—';
+      const delta=b.basis_delta_bps!=null?(b.basis_delta_bps>=0?'+':'')+Math.round(b.basis_delta_bps):'—';
+      const clsO=b.zspread_ois==null?'c-tm':b.zspread_ois>5?'c-rd':b.zspread_ois<-5?'c-gn':'c-tm';
+      const clsD=b.basis_delta_bps==null?'c-tm':b.basis_delta_bps>0?'c-rd':b.basis_delta_bps<0?'c-gn':'c-tm';
+      html+=`<tr style="background:${i%2?'rgba(22,27,34,.4)':'transparent'}">
+        <td class="fw6" style="font-size:.72rem">${b.isin}</td>
+        <td class="c-tm">${b.maturity}</td>
+        <td class="r c-tm">${b.days_to_mat}</td>
+        <td class="r">${b.coupon?b.coupon.toFixed(1)+'%':'—'}</td>
+        <td class="r fw6">${b.px_last.toFixed(2)}</td>
+        <td class="r ${clsO} fw6">${zsO}</td>
+        <td class="r c-of fw6">${zsX}</td>
+        <td class="r ${clsD}">${delta} bp</td>
+      </tr>`;
+    });
+  });
+  tb.innerHTML=html;
+  document.getElementById('bond-info').textContent=`${bondData.length} tahvil`;
+}
+
+/* ═══ Bond Charts ═══ */
+function renderBondCharts(){
+  const c=document.getElementById('bond-charts');
+  c.innerHTML=`
+    <div class="card"><div class="card-h"><span class="card-t">Bond Yield vs Curves</span></div>
+      <div class="card-b"><div class="chart-wrap"><canvas id="bondYieldChart"></canvas></div></div></div>
+    <div class="card"><div class="card-h"><span class="card-t">Z-Spread vs OIS (bp)</span></div>
+      <div class="card-b"><div class="chart-wrap"><canvas id="bondSpreadChart"></canvas></div></div></div>`;
+
+  // Yield chart
+  const vb=bondData.filter(b=>b.zspread_ois!=null&&Math.abs(b.zspread_ois)<2000);
+  const oisPts=curveData.filter(n=>n.days>0&&n.days<=1600);
+  const offPts=offshoreData.filter(n=>n.days>0&&n.days<=1600);
+  const tc=t=>t==='zcb'?'#D29922':t==='flt'?'#39D2C0':'#58A6FF';
+
+  if(charts.bondYield)charts.bondYield.destroy();
+  charts.bondYield=new Chart(document.getElementById('bondYieldChart').getContext('2d'),{
+    type:'scatter',data:{datasets:[
+      {label:'OIS Zero',data:oisPts.map(n=>({x:n.days,y:n.zero_rate})),borderColor:'#3FB950',backgroundColor:'transparent',showLine:true,tension:.3,pointRadius:0,borderWidth:2,borderDash:[4,3]},
+      {label:'Offshore Zero',data:offPts.map(n=>({x:n.days,y:n.zero_rate})),borderColor:'#F0883E',backgroundColor:'transparent',showLine:true,tension:.3,pointRadius:0,borderWidth:2,borderDash:[4,3]},
+      ...['flt','fix','zcb'].map(t=>({label:t.toUpperCase(),data:vb.filter(b=>b.bond_type===t).map(b=>({x:b.days_to_mat,y:b.yield_ois})),backgroundColor:tc(t),pointRadius:5,pointHoverRadius:7}))
+    ]},options:_chartOpts('% (yield)')
+  });
+
+  // Spread chart
+  if(charts.bondSpread)charts.bondSpread.destroy();
+  charts.bondSpread=new Chart(document.getElementById('bondSpreadChart').getContext('2d'),{
+    type:'scatter',data:{datasets:
+      ['flt','fix','zcb'].map(t=>({label:t.toUpperCase(),data:vb.filter(b=>b.bond_type===t).map(b=>({x:b.days_to_mat,y:b.zspread_ois})),backgroundColor:tc(t),pointRadius:5,pointHoverRadius:7}))
+    },options:_chartOpts('bps')
+  });
+}
+
+/* ═══ Curve Charts ═══ */
+function renderZeroCurveChart(){
+  const oisPts=curveData.filter(n=>n.days>0);
+  const offPts=offshoreData.filter(n=>n.days>0);
+  if(charts.zeroCurve)charts.zeroCurve.destroy();
+  charts.zeroCurve=new Chart(document.getElementById('zeroCurveChart').getContext('2d'),{
+    type:'line',data:{datasets:[
+      {label:'OIS (Act/365)',data:oisPts.map(n=>({x:n.days,y:n.zero_rate})),borderColor:'#3FB950',backgroundColor:'rgba(63,185,80,.06)',fill:true,tension:.3,pointRadius:0,borderWidth:2},
+      {label:'Offshore (Act/360)',data:offPts.map(n=>({x:n.days,y:n.zero_rate})),borderColor:'#F0883E',backgroundColor:'transparent',tension:.3,pointRadius:0,borderWidth:2,borderDash:[4,3]}
+    ]},options:_chartOpts('%')
+  });
+}
+
+function renderBasisChart(){
+  if(charts.basis)charts.basis.destroy();
+  charts.basis=new Chart(document.getElementById('basisChart').getContext('2d'),{
+    type:'bar',data:{
+      labels:basisData.map(b=>b.days+'d'),
+      datasets:[{label:'Basis (bp)',data:basisData.map(b=>b.basis_bps),backgroundColor:basisData.map(b=>b.basis_bps>=0?'rgba(240,136,62,.6)':'rgba(88,166,255,.6)'),borderRadius:3}]
+    },options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false},tooltip:{backgroundColor:'rgba(13,17,23,.95)',borderColor:'#1B2433',borderWidth:1,titleColor:'#E6EDF3',bodyColor:'#8B949E',bodyFont:{family:"'JetBrains Mono'",size:12}}},scales:{x:{ticks:{color:'#484F58',font:{family:"'JetBrains Mono'",size:10}},grid:{color:'rgba(27,36,51,.3)'},border:{color:'#1B2433'}},y:{ticks:{color:'#484F58',font:{family:"'JetBrains Mono'",size:10},callback:v=>v+'bp'},grid:{color:'rgba(27,36,51,.3)'},border:{color:'#1B2433'}}}}
+  });
+}
+
+function renderDFChart(){
+  const pts=curveData.filter(n=>n.days>0);
+  if(charts.df)charts.df.destroy();
+  charts.df=new Chart(document.getElementById('dfChart').getContext('2d'),{
+    type:'line',data:{datasets:[
+      {label:'Discount Factor',data:pts.map(n=>({x:n.days,y:n.df})),borderColor:'#58A6FF',backgroundColor:'rgba(88,166,255,.06)',fill:true,tension:.3,pointRadius:0,borderWidth:2}
+    ]},options:{..._chartOpts('DF'),scales:{..._chartOpts('DF').scales,y:{..._chartOpts('DF').scales.y,min:0,max:1,ticks:{color:'#484F58',font:{family:"'JetBrains Mono'",size:10},callback:v=>v.toFixed(1)}}}}
+  });
+}
+
+/* ═══ Curve Table ═══ */
+function renderCurveTable(){
+  const tb=document.getElementById('curve-tbody');
+  tb.innerHTML=curveData.map((n,i)=>`<tr style="background:${i%2?'rgba(22,27,34,.4)':'transparent'}">
+    <td class="fw6">${n.tenor}</td><td class="c-tm">${n.date}</td><td class="r c-tm">${n.days}</td>
+    <td class="r">${n.par_rate.toFixed(2)}</td><td class="r c-bl fw6">${n.zero_rate.toFixed(2)}</td>
+    <td class="r c-gn">${n.df.toFixed(6)}</td>
+  </tr>`).join('');
+}
+
+/* ═══ Market Data Tables ═══ */
+function renderOISData(ois){
+  document.getElementById('ois-data-tbody').innerHTML=(ois||[]).map((q,i)=>`<tr style="background:${i%2?'rgba(22,27,34,.4)':'transparent'}">
+    <td class="fw6">${q.tenor}</td><td class="r">${q.bid!=null?q.bid.toFixed(2):'—'}</td>
+    <td class="r">${q.ask!=null?q.ask.toFixed(2):'—'}</td><td class="r c-gn fw6">${q.mid!=null?q.mid.toFixed(2):'—'}</td>
+  </tr>`).join('');
+}
+
+function renderOffshoreData(off){
+  document.getElementById('off-data-tbody').innerHTML=(off||[]).filter(q=>q.days>0).map((q,i)=>`<tr style="background:${i%2?'rgba(22,27,34,.4)':'transparent'}">
+    <td class="fw6">${q.tenor}</td><td class="r c-tm">${q.days}</td>
+    <td class="r c-of fw6">${q.rate.toFixed(2)}</td><td class="r c-tm">${q.df.toFixed(5)}</td>
+  </tr>`).join('');
+}
+
+/* ═══ Lookup ═══ */
+async function doLookup(){
+  const dtm=parseFloat(document.getElementById('dtm-in').value);if(!dtm||dtm<0)return;
+  try{const d=await(await fetch(`/api/lookup?dtm=${dtm}`)).json();if(d.error)return;
+    document.getElementById('r-zr').textContent=d.zero_rate.toFixed(2)+'%';
+    document.getElementById('r-df').textContent=d.df.toFixed(6);
+    document.getElementById('r-gu').textContent=d.gross_up?d.gross_up.toFixed(6):'—';
+    document.getElementById('r-off').textContent=d.offshore_zr!=null?d.offshore_zr.toFixed(2)+'%':'—';
+  }catch(e){console.error(e)}
+}
 
 /* ═══ MPC Path ═══ */
 function computeForwardPath(){
@@ -198,66 +491,51 @@ function renderMPC(){
   document.getElementById('s-spot').textContent=spotRate.toFixed(2)+'%';
   const te=document.getElementById('s-total');
   te.textContent=(totalBps>=0?'+':'')+totalBps+' bps';
-  te.style.color=totalBps<0?'var(--green)':totalBps>0?'var(--red)':'var(--dim)';
+  te.style.color=totalBps<0?'var(--gn)':totalBps>0?'var(--rd)':'var(--dm)';
   document.getElementById('s-term').textContent=termRate.toFixed(2)+'%';
 
-  const tb=document.getElementById('mpc-tbody');
   let cum=spotRate;
-  tb.innerHTML=meetings.map((m,i)=>{
+  document.getElementById('mpc-tbody').innerHTML=meetings.map((m,i)=>{
     cum+=m.delta_bps/100;
     const dc=m.delta_bps<0?'neg':m.delta_bps>0?'pos':'zero';
     return`<tr>
-      <td style="color:var(--muted);white-space:nowrap">${m.date}</td>
-      <td style="color:var(--dim);text-align:center;font-family:var(--mono);font-size:.72rem">${m.period_days}d</td>
-      <td><div class="slider-cell"><button class="step-btn dn" onclick="stepDelta(${i},-25)">−</button><input type="number" class="delta-input ${dc}" id="di${i}" value="${m.delta_bps}" step="25" onchange="setDelta(${i},this.value)" onkeydown="deltaKey(event,${i})"><button class="step-btn up" onclick="stepDelta(${i},25)">+</button></div></td>
-      <td class="rate-val">${cum.toFixed(2)}%</td>
+      <td class="c-tm" style="white-space:nowrap">${m.date}</td>
+      <td class="c c-dm" style="font-size:.7rem">${m.period_days}d</td>
+      <td><div class="slider-cell"><button class="step-btn dn" onclick="stepDelta(${i},-25)">−</button><input type="number" class="delta-input ${dc}" value="${m.delta_bps}" step="25" onchange="setDelta(${i},this.value)" onkeydown="deltaKey(event,${i})"><button class="step-btn up" onclick="stepDelta(${i},25)">+</button></div></td>
+      <td class="r c-am fw6">${cum.toFixed(2)}%</td>
     </tr>`;
   }).join('');
   drawForwardChart(path);
 }
 
-function stepDelta(i,step){
-  meetings[i].delta_bps=Math.max(-2000,Math.min(2000,meetings[i].delta_bps+step));
-  renderMPC();fetchModelRatesDebounced();
-}
-function setDelta(i,v){
-  const n=parseInt(v,10);
-  meetings[i].delta_bps=isNaN(n)?0:Math.round(n/25)*25;
-  renderMPC();fetchModelRatesDebounced();
-}
-function deltaKey(e,i){
-  if(e.key==='ArrowUp'){e.preventDefault();stepDelta(i,25)}
-  else if(e.key==='ArrowDown'){e.preventDefault();stepDelta(i,-25)}
-}
+function stepDelta(i,step){meetings[i].delta_bps=Math.max(-2000,Math.min(2000,meetings[i].delta_bps+step));renderMPC();fetchModelRatesDebounced()}
+function setDelta(i,v){const n=parseInt(v,10);meetings[i].delta_bps=isNaN(n)?0:Math.round(n/25)*25;renderMPC();fetchModelRatesDebounced()}
+function deltaKey(e,i){if(e.key==='ArrowUp'){e.preventDefault();stepDelta(i,25)}else if(e.key==='ArrowDown'){e.preventDefault();stepDelta(i,-25)}}
 function resetToImplied(){meetings.forEach((m,i)=>{m.delta_bps=impliedDeltas[i]||0});renderMPC();fetchModelRates()}
 function clearAllCuts(){meetings.forEach(m=>{m.delta_bps=0});renderMPC();fetchModelRates()}
 
 /* ═══ Model Rates ═══ */
-let _modelTimer=null;
-function fetchModelRatesDebounced(){clearTimeout(_modelTimer);_modelTimer=setTimeout(fetchModelRates,150)}
+let _mt=null;
+function fetchModelRatesDebounced(){clearTimeout(_mt);_mt=setTimeout(fetchModelRates,200)}
 async function fetchModelRates(){
-  try{
-    const payload={spot_rate:spotRate,meetings:meetings.map(m=>({date:m.date,delta_bps:m.delta_bps}))};
+  try{const payload={spot_rate:spotRate,meetings:meetings.map(m=>({date:m.date,delta_bps:m.delta_bps}))};
     const r=await fetch('/api/model_rates',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(payload)});
-    const data=await r.json();
-    renderModelRates(data);
+    renderModelRates(await r.json());
   }catch(e){console.error(e)}
 }
+
 function renderModelRates(data){
   const tb=document.getElementById('model-tbody');
-  if(!data||!data.length){tb.innerHTML='<tr><td colspan="7" style="text-align:center;color:var(--dim);padding:1.5rem">—</td></tr>';return}
-  tb.innerHTML=data.map(d=>{
-    const diffCls=d.diff_bps==null?'c-mut':Math.abs(d.diff_bps)<=15?'c-mut':d.diff_bps<0?'c-neg':'c-pos';
+  if(!data||!data.length){tb.innerHTML='<tr><td colspan="7" class="c c-tm" style="padding:20px">—</td></tr>';return}
+  tb.innerHTML=data.map((d,i)=>{
+    const diffCls=d.diff_bps==null?'c-tm':Math.abs(d.diff_bps)<=15?'c-tm':d.diff_bps<0?'c-gn':'c-rd';
     const diffStr=d.diff_bps!=null?(d.diff_bps>0?'+':'')+d.diff_bps.toFixed(0):'—';
     const mkt=d.market_rate!=null?d.market_rate.toFixed(2):'—';
-    return`<tr>
-      <td style="font-weight:600;color:var(--text)">${d.tenor}</td>
-      <td style="color:var(--muted)">${d.maturity}</td>
-      <td style="text-align:right;color:var(--dim)">${d.cal_days}</td>
-      <td style="text-align:center;color:var(--dim)">${d.method}</td>
-      <td style="text-align:right;color:var(--blue);font-weight:600">${d.model_rate.toFixed(2)}</td>
-      <td style="text-align:right;color:var(--muted)">${mkt}</td>
-      <td style="text-align:right" class="${diffCls}">${diffStr}</td>
+    return`<tr style="background:${i%2?'rgba(22,27,34,.4)':'transparent'}">
+      <td class="fw6">${d.tenor}</td><td class="c-tm">${d.maturity}</td>
+      <td class="r c-dm">${d.cal_days}</td><td class="c c-dm">${d.method}</td>
+      <td class="r c-bl fw6">${d.model_rate.toFixed(2)}</td><td class="r c-tm">${mkt}</td>
+      <td class="r ${diffCls} fw6">${diffStr}</td>
     </tr>`}).join('');
   document.getElementById('model-info').textContent=`${data.length} tenor | ${data.filter(d=>d.method==='PAR').length} PAR + ${data.filter(d=>d.method==='ZC').length} ZC`;
 }
@@ -265,7 +543,7 @@ function renderModelRates(data){
 /* ═══ Forward Chart (SVG) ═══ */
 function drawForwardChart(path){
   const svg=document.getElementById('fwd-svg');
-  const W=600,H=280,pL=50,pR=16,pT=16,pB=30,iW=W-pL-pR,iH=H-pT-pB;
+  const W=600,H=260,pL=50,pR=16,pT=16,pB=30,iW=W-pL-pR,iH=H-pT-pB;
   if(path.length<2){svg.innerHTML='';return}
   const last=path[path.length-1];
   const ext=[...path,{date:'tail',rate:last.rate,delta:0}];
@@ -277,49 +555,26 @@ function drawForwardChart(path){
   const xOf=i=>pL+(i/(n-1))*iW;
   const yOf=r=>pT+(1-(r-yMn)/yS)*iH;
   let h='';
-  // Grid
   for(let i=0;i<=5;i++){const r=yMn+i*(yMx-yMn)/5;const y=yOf(r);h+=`<line x1="${pL}" x2="${W-pR}" y1="${y}" y2="${y}" stroke="#1B2433" stroke-dasharray="2 3"/>`;h+=`<text x="${pL-6}" y="${y+3}" text-anchor="end" font-size="10" fill="#484F58" font-family="JetBrains Mono">${r.toFixed(1)}</text>`}
-  // Step path
   let d=`M ${xOf(0)} ${yOf(ext[0].rate)}`;
   for(let i=1;i<ext.length;i++){d+=` L ${xOf(i)} ${yOf(ext[i-1].rate)} L ${xOf(i)} ${yOf(ext[i].rate)}`}
-  h+=`<path d="${d}" fill="none" stroke="var(--amber)" stroke-width="2" stroke-linejoin="miter"/>`;
+  h+=`<path d="${d}" fill="none" stroke="var(--am)" stroke-width="2" stroke-linejoin="miter"/>`;
   h+=`<path d="${d} L ${xOf(ext.length-1)} ${pT+iH} L ${xOf(0)} ${pT+iH} Z" fill="rgba(210,153,34,.06)"/>`;
-  // Points
-  for(let i=1;i<path.length;i++){const p=path[i];const c=p.delta<0?'var(--green)':p.delta>0?'var(--red)':'var(--dim)';h+=`<circle cx="${xOf(i)}" cy="${yOf(p.rate)}" r="4" fill="${c}" stroke="var(--bg-card)" stroke-width="1.5"/>`}
-  h+=`<circle cx="${xOf(0)}" cy="${yOf(path[0].rate)}" r="4" fill="var(--blue)" stroke="var(--bg-card)" stroke-width="1.5"/>`;
-  // X labels
+  for(let i=1;i<path.length;i++){const p=path[i];const c=p.delta<0?'var(--gn)':p.delta>0?'var(--rd)':'var(--dm)';h+=`<circle cx="${xOf(i)}" cy="${yOf(p.rate)}" r="4" fill="${c}" stroke="var(--sf)" stroke-width="1.5"/>`}
+  h+=`<circle cx="${xOf(0)}" cy="${yOf(path[0].rate)}" r="4" fill="var(--bl)" stroke="var(--sf)" stroke-width="1.5"/>`;
   const skip=path.length>8?2:1;
   for(let i=0;i<path.length;i++){if(i>0&&i%skip!==0)continue;const lbl=i===0?'Spot':path[i].date.slice(5);h+=`<text x="${xOf(i)}" y="${H-pB+14}" text-anchor="middle" font-size="9" fill="#484F58" font-family="JetBrains Mono">${lbl}</text>`}
-  // Rate labels
-  for(let i=0;i<path.length;i++){if(path.length>8&&i>0&&i%skip!==1&&i!==path.length-1)continue;h+=`<text x="${xOf(i)}" y="${yOf(path[i].rate)-8}" text-anchor="middle" font-size="9" fill="var(--muted)" font-family="JetBrains Mono">${path[i].rate.toFixed(1)}</text>`}
+  for(let i=0;i<path.length;i++){if(path.length>8&&i>0&&i%skip!==1&&i!==path.length-1)continue;h+=`<text x="${xOf(i)}" y="${yOf(path[i].rate)-8}" text-anchor="middle" font-size="9" fill="var(--tm)" font-family="JetBrains Mono">${path[i].rate.toFixed(1)}</text>`}
   svg.innerHTML=h;
 }
 
-/* ═══ OIS Chart ═══ */
-function renderChart(){
-  const ctx=document.getElementById('oisChart').getContext('2d');
-  const pts=curveData.filter(d=>d.DTM>0);
-  if(oisChart)oisChart.destroy();
-  oisChart=new Chart(ctx,{type:'line',data:{labels:pts.map(d=>d.DTM),datasets:[
-    {label:'Spot OIS (%)',data:pts.map(d=>d.spot_ois),borderColor:'#58A6FF',backgroundColor:'rgba(88,166,255,.08)',fill:true,tension:.3,pointRadius:0,pointHoverRadius:5,pointHoverBackgroundColor:'#58A6FF',borderWidth:2,yAxisID:'y'},
-    {label:'Discount Factor',data:pts.map(d=>d.df),borderColor:'#3FB950',backgroundColor:'transparent',tension:.3,pointRadius:0,pointHoverRadius:5,pointHoverBackgroundColor:'#3FB950',borderWidth:1.5,borderDash:[4,3],yAxisID:'y1'}
-  ]},options:{responsive:true,maintainAspectRatio:false,interaction:{mode:'index',intersect:false},
-    onClick:(e)=>{const p=oisChart.getElementsAtEventForMode(e,'index',{intersect:false},false);if(p.length){document.getElementById('dtm-in').value=pts[p[0].index].DTM;doLookup()}},
-    plugins:{legend:{display:true,position:'top',align:'end',labels:{color:'#8B949E',font:{family:"'DM Sans'",size:11},boxWidth:14,boxHeight:2,padding:14}},tooltip:{backgroundColor:'rgba(13,17,23,.95)',borderColor:'#1B2433',borderWidth:1,titleColor:'#E6EDF3',bodyColor:'#8B949E',titleFont:{family:"'DM Sans'",weight:'600'},bodyFont:{family:"'JetBrains Mono'",size:12},padding:10,callbacks:{title:i=>`DTM: ${i[0].label} gün (${(i[0].label/365).toFixed(1)}Y)`,label:i=>i.datasetIndex===0?` Rate: ${i.raw.toFixed(2)}%`:` df: ${i.raw.toFixed(6)}`}}},
-    scales:{x:{type:'linear',ticks:{color:'#484F58',font:{family:"'JetBrains Mono'",size:10},callback:v=>{if(v===0)return'0';if(v%365===0)return(v/365)+'Y';return''},stepSize:365},grid:{color:'rgba(27,36,51,.5)',lineWidth:.5},border:{color:'#1B2433'}},y:{position:'left',ticks:{color:'#58A6FF',font:{family:"'JetBrains Mono'",size:10},callback:v=>v.toFixed(0)+'%'},grid:{color:'rgba(88,166,255,.06)',lineWidth:.5},border:{color:'#1B2433'}},y1:{position:'right',ticks:{color:'#3FB950',font:{family:"'JetBrains Mono'",size:10},callback:v=>v.toFixed(2)},grid:{display:false},border:{color:'#1B2433'},min:0,max:1}}}});
-}
-
-/* ═══ Lookup ═══ */
-async function doLookup(){
-  const dtm=parseFloat(document.getElementById('dtm-in').value);if(!dtm||dtm<0)return;
-  try{const d=await(await fetch(`/api/lookup?dtm=${dtm}`)).json();if(d.error)return;
-    document.getElementById('r-rate').textContent=d.spot_ois.toFixed(2)+'%';
-    document.getElementById('r-df').textContent=d.df.toFixed(6);
-    document.getElementById('r-zc').textContent=d.zc_rate.toFixed(2)+'%';
-    document.getElementById('r-gu').textContent=d.gross_up?d.gross_up.toFixed(6):'—';
-    document.getElementById('cross-info').innerHTML=`<span style="color:var(--blue)">DTM ${dtm}</span> gün ≈ <span style="color:var(--amber)">${(dtm/365).toFixed(2)}Y</span>`;
-    if(oisChart){if(oisChart.data.datasets.length>2)oisChart.data.datasets[2].data=[{x:dtm,y:d.spot_ois}];else oisChart.data.datasets.push({label:'Lookup',data:[{x:dtm,y:d.spot_ois}],type:'scatter',borderColor:'#D29922',backgroundColor:'#D29922',pointRadius:7,pointHoverRadius:9,pointStyle:'crossRot',borderWidth:2,yAxisID:'y',showLine:false});oisChart.update('none')}
-  }catch(e){console.error(e)}
+/* ═══ Chart Helpers ═══ */
+function _chartOpts(yLabel){
+  return {responsive:true,maintainAspectRatio:false,interaction:{mode:'index',intersect:false},
+    plugins:{legend:{display:true,position:'top',align:'end',labels:{color:'#8B949E',font:{family:"'DM Sans'",size:11},boxWidth:14,boxHeight:2,padding:14}},
+      tooltip:{backgroundColor:'rgba(13,17,23,.95)',borderColor:'#1B2433',borderWidth:1,titleColor:'#E6EDF3',bodyColor:'#8B949E',titleFont:{family:"'DM Sans'",weight:'600'},bodyFont:{family:"'JetBrains Mono'",size:12},padding:10}},
+    scales:{x:{type:'linear',ticks:{color:'#484F58',font:{family:"'JetBrains Mono'",size:10},callback:v=>{if(v===0)return'0';if(v%365===0)return(v/365)+'Y';return''},stepSize:365},grid:{color:'rgba(27,36,51,.3)',lineWidth:.5},border:{color:'#1B2433'}},
+      y:{ticks:{color:'#484F58',font:{family:"'JetBrains Mono'",size:10}},grid:{color:'rgba(27,36,51,.3)',lineWidth:.5},border:{color:'#1B2433'}}}};
 }
 </script>
 </body>
